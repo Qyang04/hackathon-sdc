@@ -1,0 +1,127 @@
+// Data model for the Orbyte Project Commitment Copilot (MVP).
+// Owner: Workstream B (schema changes need a heads-up in the team chat; see docs/CONTRACTS.md).
+// SQLite for local dev. For Replit deployment, switch provider to "postgresql" and set DATABASE_URL.
+// Enum-like fields are strings because SQLite has no enums; allowed values are listed in comments
+// and mirrored as TypeScript unions in src/lib/engine/types.ts.
+// Money is always integer sen (RM x 100). Dates are calendar dates in MYT, stored as "YYYY-MM-DD".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Single-row company settings (id = 1). Example values, set by the business owner.
+model CompanySettings {
+  id                   Int    @id @default(1)
+  companyName          String
+  openingCashSen       Int
+  openingDate          String // YYYY-MM-DD: cash position is as at the start of this day
+  reserveSen           Int    // safety buffer the owner wants to keep
+  approvalThresholdSen Int    // commitments above this always need owner review
+  customerDelayDays    Int    @default(0) // "customers usually pay N days late" (downside scenario)
+}
+
+/// Existing project in the portfolio (simulated Orbyte Work / Projects data).
+model Project {
+  id               String      @id @default(cuid())
+  name             String
+  client           String
+  status           String      // ACTIVE | COMPLETED | ON_HOLD
+  startDate        String
+  endDate          String
+  contractValueSen Int
+  source           String      @default("SEEDED") // SEEDED | ORBYTE_SIMULATED
+  events           CashEvent[]
+}
+
+/// One dated cash movement = one obligation or expected receipt. No separate invoice entity in the MVP.
+/// projectId null = company-level one-off event. requestId set = belongs to a proposal (uses offsetDays).
+model CashEvent {
+  id           String             @id @default(cuid())
+  projectId    String?
+  project      Project?           @relation(fields: [projectId], references: [id])
+  requestId    String?
+  request      CommitmentRequest? @relation(fields: [requestId], references: [id])
+  direction    String             // IN | OUT
+  amountSen    Int
+  paidSen      Int                @default(0)
+  date         String?            // absolute date for existing events
+  offsetDays   Int?               // days after proposal start, for proposal events
+  status       String             // PLANNED | COMMITTED | PAID | CANCELLED
+  confidence   String             // CONFIRMED | ESTIMATED
+  counterparty String
+  label        String
+  source       String             // SEEDED | MANUAL | AI_EXTRACTED
+  sourceRef    String?            // e.g. quotation number or the text snippet AI extracted from
+  confirmed    Boolean            @default(true) // AI_EXTRACTED events start false until a person confirms
+}
+
+/// Company-level recurring outflows: payroll, rent, loan repayments.
+model RecurringCost {
+  id        String  @id @default(cuid())
+  label     String
+  amountSen Int
+  frequency String  // WEEKLY | MONTHLY
+  nextDate  String
+  endDate   String?
+}
+
+/// The case: a proposed commitment going through check -> owner decision -> outcome.
+model CommitmentRequest {
+  id               String        @id @default(cuid())
+  title            String
+  client           String
+  requestedBy      String
+  startDate        String
+  durationDays     Int
+  contractValueSen Int
+  budgetSen        Int
+  justification    String        @default("")
+  sourceText       String        @default("") // pasted quotation / PO text used for AI extraction
+  status           String        @default("DRAFT") // DRAFT | NEEDS_INFO | CHECKED | APPROVED | REJECTED | COMPLETED
+  createdAt        DateTime      @default(now())
+  events           CashEvent[]
+  forecastRuns     ForecastRun[]
+  decisions        Decision[]
+  activities       ActivityLog[]
+}
+
+/// Snapshot of one engine run, kept so a decision can always be traced to the figures shown.
+model ForecastRun {
+  id         String            @id @default(cuid())
+  requestId  String
+  request    CommitmentRequest @relation(fields: [requestId], references: [id])
+  scenario   String            // BASE | DOWNSIDE | DEFERRED_START
+  inputJson  String            // engine inputs (settings + events) as JSON
+  resultJson String            // ComparisonResult as JSON
+  policyJson String            // PolicyResult as JSON
+  briefJson  String?           // AI brief as JSON, if generated
+  createdAt  DateTime          @default(now())
+}
+
+model Decision {
+  id            String            @id @default(cuid())
+  requestId     String
+  request       CommitmentRequest @relation(fields: [requestId], references: [id])
+  forecastRunId String
+  actorRole     String            // OWNER | STAFF
+  actorName     String
+  outcome       String            // APPROVED | REJECTED | NEEDS_INFO
+  reason        String
+  selfApproved  Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+}
+
+model ActivityLog {
+  id        String             @id @default(cuid())
+  requestId String?
+  request   CommitmentRequest? @relation(fields: [requestId], references: [id])
+  actor     String
+  action    String             // e.g. REQUEST_CREATED, AI_EXTRACTED, EVENT_CONFIRMED, FORECAST_RUN, DECISION, OUTCOME_SENT
+  detail    String
+  createdAt DateTime           @default(now())
+}
