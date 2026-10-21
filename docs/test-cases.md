@@ -17,6 +17,7 @@ How to use this file:
 - Q2. If the downside receipt delay pushes an existing IN event past the horizon end, is it dropped with `EVENT_BEYOND_HORIZON`, or does the horizon extend?
 - Q3. Monthly recurring on the 31st: after February (28th), does March go back to the 31st? **Decided: yes.** Every month uses the original day, capped at the month's last day.
 - Q5. A recurring cost whose `nextDate` is before `openingDate`: ignore the missed occurrences, or count them? **Decided: count each missed occurrence on `openingDate`, flagged `overdue`** (same as CONTRACTS rule 2 for one-off events; ignoring them would overstate cash).
+- Q6. Downside on an overdue estimated receipt: delay from its original date, or from day 0? **Decided: from day 0** (move overdue to day 0 first, then add the delay). It is already late, so assuming it arrives today would be optimistic.
 - Q4. `excludeUnconfirmedReceipts`: validation already blocks unconfirmed AI events, so what does this rule ever drop?
 
 ## Case 1 — baseline: statuses, overdue, partial payment, recurring, daily vs weekly
@@ -43,19 +44,24 @@ Daily table (days with movement only):
 
 | Date | What moves (and why) | In (RM) | Out (RM) | Closing (RM) |
 | --- | --- | --- | --- | --- |
-| 2026-11-02 | opening + ___ | | | |
-| | | | | |
+| 2026-11-02 | opening 50,000.00; E1 was due 2026-10-28, unpaid, so it moves to day 0 | | 4,000.00 | 46,000.00 |
+| 2026-11-04 | E2 | | 15,000.00 | 31,000.00 |
+| 2026-11-06 | E4: 5,000.00 minus 2,000.00 already paid | | 3,000.00 | 28,000.00 |
+| 2026-11-09 | E6 | 10,000.00 | | 38,000.00 |
+| 2026-11-13 | R1 payroll | | 12,000.00 | 26,000.00 |
+| 2026-11-14 | E7 | 5,000.00 | | 31,000.00 |
 
 Weekly roll-up:
 
 | Week start | In (RM) | Out (RM) | Closing (RM) | Lowest daily (RM) |
 | --- | --- | --- | --- | --- |
-| 2026-11-02 | | | | |
-| 2026-11-09 | | | | |
+| 2026-11-02 | 0.00 | 22,000.00 | 28,000.00 | 28,000.00 |
+| 2026-11-09 | 15,000.00 | 12,000.00 | 31,000.00 | 26,000.00 |
 
-Expected: minimum balance RM ___ on ____-__-__; first breach ____-__-__ or none; peak funding need RM ___.
-Warnings (code + event id): ___.
-Ignored events and why: ___.
+Expected: minimum balance RM 26,000.00 on 2026-11-13; first breach 2026-11-06 (28,000.00 is below 30,000.00); peak funding need RM 4,000.00 (30,000.00 - 26,000.00).
+The lowest weekly closing is 28,000.00, but the true minimum is 26,000.00 mid-week: this is why the minimum comes from daily values.
+Warnings (code + event id): OVERDUE_MOVED_TO_DAY0 (E1); EVENT_BEYOND_HORIZON (E8, dated 2026-11-20, after the horizon end 2026-11-15).
+Ignored events and why: E3 is PAID (already inside opening cash); E5 is CANCELLED.
 
 ## Case 2 — proposal: reserve equality, one sen below, horizon extension, delta
 
