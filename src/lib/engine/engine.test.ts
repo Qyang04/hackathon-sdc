@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  addDays, addMonthsCapped, daysBetween, daysInMonth, expandRecurring, formatRM, normaliseExisting, rmToSen, scenarioPresets, weekStart,
+  addDays, addMonthsCapped, daysBetween, daysInMonth, expandRecurring, formatRM, normaliseExisting, normaliseProposal, rmToSen, scenarioPresets, weekStart,
 } from "./index";
-import type { CashEventInput, ForecastSettings, RecurringCostInput } from "./index";
+import type { CashEventInput, ForecastSettings, ProposalInput, RecurringCostInput } from "./index";
 
 describe("money helpers", () => {
   it("parses RM strings into integer sen", () => {
@@ -94,7 +94,7 @@ const case1Events: CashEventInput[] = [
   ev({ id: "E7", direction: "IN", amountSen: 500_000, date: "2026-11-14", status: "PLANNED" }),
   ev({ id: "E8", direction: "IN", amountSen: 600_000, date: "2026-11-20", status: "PLANNED" }),
 ];
-const [BASE, DOWNSIDE] = scenarioPresets(14, 30);
+const [BASE, DOWNSIDE, DEFERRED] = scenarioPresets(14, 30);
 
 describe("normaliseExisting", () => {
   it("Case 1: drops PAID and CANCELLED, counts what is left of partial payments, moves overdue to day 0", () => {
@@ -152,6 +152,39 @@ describe("normaliseExisting", () => {
   });
 });
 
+// Case 3 in docs/test-cases.md: proposal starting 2026-11-03.
+const case3Proposal: ProposalInput = {
+  requestId: "REQ",
+  startDate: "2026-11-03",
+  events: [
+    { id: "P1", direction: "OUT", amountSen: 1_000_000, offsetDays: 0, confidence: "CONFIRMED", label: "P1", source: "MANUAL", confirmed: true },
+    { id: "P2", direction: "IN", amountSen: 2_500_000, offsetDays: 20, confidence: "ESTIMATED", label: "P2", source: "MANUAL", confirmed: true },
+    { id: "P3", direction: "OUT", amountSen: 333_335, offsetDays: 5, confidence: "ESTIMATED", label: "P3", source: "MANUAL", confirmed: true },
+  ],
+};
+
+describe("normaliseProposal", () => {
+  const table = (scenario: typeof BASE) =>
+    normaliseProposal(case3Proposal, scenario).events.map((e) => [e.sourceId, e.date, e.signedSen]);
+
+  it("Case 3 BASE: date = start + offset", () => {
+    expect(table(BASE)).toEqual([["P1", "2026-11-03", -1_000_000], ["P2", "2026-11-23", 2_500_000], ["P3", "2026-11-08", -333_335]]);
+  });
+  it("Case 3 DOWNSIDE: delays the estimated receipt, adds 10% to costs (rounded half up)", () => {
+    expect(table(DOWNSIDE)).toEqual([["P1", "2026-11-03", -1_100_000], ["P2", "2026-12-07", 2_500_000], ["P3", "2026-11-08", -366_669]]);
+  });
+  it("Case 3 DEFERRED_START: shifts every event by startShiftDays", () => {
+    expect(table(DEFERRED)).toEqual([["P1", "2026-12-03", -1_000_000], ["P2", "2026-12-23", 2_500_000], ["P3", "2026-12-08", -333_335]]);
+  });
+  it("marks events as PROPOSAL and leaves out unconfirmed receipts in DOWNSIDE with a warning", () => {
+    const p: ProposalInput = { ...case3Proposal, events: [{ ...case3Proposal.events[1], id: "U", confirmed: false }] };
+    expect(normaliseProposal(p, BASE).events.map((e) => e.kind)).toEqual(["PROPOSAL"]);
+    const down = normaliseProposal(p, DOWNSIDE);
+    expect(down.events).toEqual([]);
+    expect(down.warnings.map((w) => [w.code, w.sourceId])).toEqual([["UNCONFIRMED_EXCLUDED", "U"]]);
+  });
+});
+
 // TODO(A): turn each todo into a real test with hand-calculated expected values
 // (write the calculation in docs/test-cases.md first, then the code).
 describe("forecast engine", () => {
@@ -160,8 +193,6 @@ describe("forecast engine", () => {
   it.todo("balance exactly equal to the reserve is not a breach; one sen below is");
   it.todo("peakFundingNeed = max(0, reserve - minBalance)");
   it.todo("horizon extends to the proposal's last event");
-  it.todo("DOWNSIDE delays estimated receipts and adds cost increase to unpaid OUT");
-  it.todo("DEFERRED_START shifts every proposal event by startShiftDays");
   it.todo("identical inputs give identical outputs");
   it.todo("minBalanceDelta = withProposal.min - baseline.min");
 });

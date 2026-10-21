@@ -106,12 +106,36 @@ function increaseByPct(sen: number, pct: number): number {
   return Math.floor((sen * (100 + pct) + 50) / 100);
 }
 
-/** Materialise proposal events from offsets, applying startShiftDays and scenario rules. */
+/**
+ * Materialise proposal events from offsets: date = startDate + startShiftDays + offsetDays.
+ * Same scenario rules as existing events. Validation rejects a start before the opening date, so nothing here is overdue.
+ */
 export function normaliseProposal(
-  _proposal: ProposalInput,
-  _scenario: ScenarioParams,
+  proposal: ProposalInput,
+  scenario: ScenarioParams,
 ): { events: NormalisedEvent[]; warnings: EngineWarning[] } {
-  throw new NotImplementedError("normaliseProposal");
+  const out: NormalisedEvent[] = [];
+  const warnings: EngineWarning[] = [];
+  const start = addDays(proposal.startDate, scenario.startShiftDays);
+
+  for (const e of proposal.events) {
+    if (e.direction === "IN" && !e.confirmed && scenario.excludeUnconfirmedReceipts) {
+      warnings.push({ code: "UNCONFIRMED_EXCLUDED", sourceId: e.id, message: `"${e.label}" is not confirmed, so this scenario leaves it out.` });
+      continue;
+    }
+    let date = addDays(start, e.offsetDays);
+    if (e.direction === "IN" && e.confidence === "ESTIMATED") date = addDays(date, scenario.receiptDelayDays);
+    const amount = e.direction === "OUT" ? increaseByPct(e.amountSen, scenario.costIncreasePct) : e.amountSen;
+    out.push({
+      sourceId: e.id,
+      kind: "PROPOSAL",
+      date,
+      signedSen: e.direction === "IN" ? amount : -amount,
+      label: e.label,
+      overdue: false,
+    });
+  }
+  return { events: out, warnings };
 }
 
 /** Daily running balance from openingCash over the horizon, plus weekly roll-up and metrics. */
