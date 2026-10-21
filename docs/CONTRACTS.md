@@ -28,6 +28,13 @@ What each workstream builds against. TypeScript types are the source of truth; t
 9. Comparison: baseline = existing + recurring; withProposal = baseline + proposal; `minBalanceDeltaSen = withProposal.min - baseline.min`; main contributors = the largest movements (by absolute value) in the 14 days up to and including the withProposal minimum date, top 5.
 10. Pure functions: no database, no network, no AI, no current time. Same input → same output.
 
+## Validation rules (`src/lib/validation`)
+
+`validateRequest(draft, openingDate)`. ERROR blocks the check; WARNING is shown to the owner.
+
+- ERROR: missing title, client or start date; invalid start date; start date before `openingDate`; duration, contract value, budget or any event amount not a positive whole number; no events; any `AI_EXTRACTED` event not confirmed.
+- WARNING: receipts total differs from contract value; costs total below or above budget; possible duplicate (same direction and amount within 3 days).
+
 ## Policy rules (`src/lib/policy`)
 
 | Rule id | Condition | Outcome |
@@ -67,11 +74,11 @@ DRAFT --(check run)--> CHECKED --(owner APPROVED)--> APPROVED --(e-sign sent)-->
 | --- | --- | --- |
 | `GET /api/portfolio` | Settings, projects with events, recurring costs | Done |
 | `POST /api/session` | Switch simulated role | Done |
-| `GET /api/requests` | List requests | TODO(B) |
-| `POST /api/requests` | Create DRAFT request with proposal events | TODO(B) |
-| `GET /api/requests/:id` | Request, events, latest run, decisions, activity | TODO(B) |
-| `PATCH /api/requests/:id` | Edit draft, confirm AI-extracted events | TODO(B) |
-| `POST /api/extract` | AI milestones from pasted text | TODO(B) |
+| `GET /api/requests` | List requests | Done |
+| `POST /api/requests` | Create DRAFT request with proposal events | Done |
+| `GET /api/requests/:id` | Request, events, latest run, decisions, activity | Done |
+| `PATCH /api/requests/:id` | Edit draft, confirm AI-extracted events, add/remove manual events | Done |
+| `POST /api/extract` | AI milestones from pasted text | Done |
 | `POST /api/requests/:id/forecast` | Validate, three scenarios, policy, brief, save run | TODO(B) |
 | `POST /api/requests/:id/decision` | Owner decision + outcome action | TODO(B) |
 | `POST /api/reset` | Re-seed demo data | TODO(B) |
