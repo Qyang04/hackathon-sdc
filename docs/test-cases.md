@@ -3,13 +3,119 @@
 Write each case here first, calculated by hand (or in a spreadsheet), then encode it in `src/lib/engine/engine.test.ts`.
 These tests are the evidence that the figures are correct (must-have 3: accuracy).
 
-## Case 1 — template
+How to use this file:
 
-Settings: opening cash RM ___ on ____-__-__, reserve RM ___, horizon 91 days.
+- Inputs are fixed below. Fill in every `___` yourself, by hand or in a spreadsheet, before writing the engine.
+- Use a short horizon (`minHorizonDays = 14`) so a daily table fits on one screen. Rules don't depend on 91 days.
+- Only list days where something moves; every other day keeps the previous closing balance.
+- `2026-11-02` is a Monday, so the 14-day horizon is `2026-11-02` to `2026-11-15` (two full weeks).
+- Each case lists the `it.todo` items in `engine.test.ts` it proves.
 
-| Date | Event | Status | In (RM) | Out (RM) | Closing (RM) |
-| --- | --- | --- | --- | --- | --- |
-| | opening | | | | |
-| | | | | | |
+## Open questions (decide with the team before calculating, then record in DECISIONS.md)
+
+- Q1. Does the downside `costIncreasePct` apply to recurring costs (payroll, rent), or only to project OUT events?
+- Q2. If the downside receipt delay pushes an existing IN event past the horizon end, is it dropped with `EVENT_BEYOND_HORIZON`, or does the horizon extend?
+- Q3. Monthly recurring on the 31st: after February (28th), does March go back to the 31st? (CONTRACTS.md rule 3 suggests yes.)
+- Q4. `excludeUnconfirmedReceipts`: validation already blocks unconfirmed AI events, so what does this rule ever drop?
+
+## Case 1 — baseline: statuses, overdue, partial payment, recurring, daily vs weekly
+
+Proves: baseline daily balances; PAID excluded and partial payment; CANCELLED excluded; overdue moved to day 0;
+minimum from daily values, not weekly; peak funding need.
+
+Settings: opening cash RM 50,000.00 at the start of 2026-11-02, reserve RM 30,000.00, `minHorizonDays` 14. No proposal (baseline only).
+
+| Id | Direction | Amount (RM) | Paid (RM) | Date | Status | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| E1 | OUT | 4,000.00 | 0 | 2026-10-28 | COMMITTED | CONFIRMED |
+| E2 | OUT | 15,000.00 | 0 | 2026-11-04 | COMMITTED | CONFIRMED |
+| E3 | OUT | 8,000.00 | 8,000.00 | 2026-11-05 | PAID | CONFIRMED |
+| E4 | OUT | 5,000.00 | 2,000.00 | 2026-11-06 | COMMITTED | CONFIRMED |
+| E5 | IN | 20,000.00 | 0 | 2026-11-07 | CANCELLED | ESTIMATED |
+| E6 | IN | 10,000.00 | 0 | 2026-11-09 | PLANNED | ESTIMATED |
+| E7 | IN | 5,000.00 | 0 | 2026-11-14 | PLANNED | CONFIRMED |
+| E8 | IN | 6,000.00 | 0 | 2026-11-20 | PLANNED | CONFIRMED |
+
+Recurring: R1 Payroll, MONTHLY, RM 12,000.00, `nextDate` 2026-11-13, no end date.
+
+Daily table (days with movement only):
+
+| Date | What moves (and why) | In (RM) | Out (RM) | Closing (RM) |
+| --- | --- | --- | --- | --- |
+| 2026-11-02 | opening + ___ | | | |
+| | | | | |
+
+Weekly roll-up:
+
+| Week start | In (RM) | Out (RM) | Closing (RM) | Lowest daily (RM) |
+| --- | --- | --- | --- | --- |
+| 2026-11-02 | | | | |
+| 2026-11-09 | | | | |
 
 Expected: minimum balance RM ___ on ____-__-__; first breach ____-__-__ or none; peak funding need RM ___.
+Warnings (code + event id): ___.
+Ignored events and why: ___.
+
+## Case 2 — proposal: reserve equality, one sen below, horizon extension, delta
+
+Proves: equal to reserve is not a breach, one sen below is; horizon extends to the proposal's last event;
+`minBalanceDelta = withProposal.min - baseline.min`.
+
+Settings: opening cash RM 30,000.00 at the start of 2026-11-02, reserve RM 20,000.00, `minHorizonDays` 14. No existing events, no recurring costs.
+
+Proposal: start date 2026-11-03, scenario BASE.
+
+| Id | Direction | Amount (RM) | Offset days | Confidence | Confirmed |
+| --- | --- | --- | --- | --- | --- |
+| P1 | OUT | 10,000.00 | 0 | CONFIRMED | yes |
+| P2 | IN | 25,000.00 | 20 | ESTIMATED | yes |
+
+Case 2b: same as Case 2, but P1 = RM 10,000.01.
+
+| | Case 2 | Case 2b |
+| --- | --- | --- |
+| Horizon end | | |
+| Baseline min balance / date | | |
+| With-proposal min balance / date | | |
+| First breach (with proposal) | | |
+| `minBalanceDeltaSen` | | |
+| Main contributors (top 5, by absolute value) | | |
+
+## Case 3 — scenarios: downside and deferred start
+
+Proves: DOWNSIDE delays ESTIMATED receipts and adds the cost increase to unpaid OUT (rounded half up);
+DEFERRED_START shifts every proposal event.
+
+Inputs: Case 2 settings and proposal (P1 = RM 10,000.00), plus:
+
+| Id | Direction | Amount (RM) | Offset days | Confidence | Confirmed |
+| --- | --- | --- | --- | --- | --- |
+| P3 | OUT | 3,333.35 | 5 | ESTIMATED | yes |
+
+Scenarios (from `scenarioPresets(14, 30)`): DOWNSIDE = receipts +14 days, costs +10%, unconfirmed receipts excluded; DEFERRED_START = start +30 days.
+
+| Event | BASE date / amount | DOWNSIDE date / amount | DEFERRED_START date / amount |
+| --- | --- | --- | --- |
+| P1 | | | |
+| P2 | | | |
+| P3 | | | |
+
+Rounding check: P3 under DOWNSIDE = 333,335 sen x 1.10 = ___ sen → rounded half up = ___ sen.
+
+| | BASE | DOWNSIDE | DEFERRED_START |
+| --- | --- | --- | --- |
+| Horizon end | | | |
+| With-proposal min balance / date | | | |
+| First breach | | | |
+
+## Case 4 — recurring expansion only (no balance table)
+
+Proves: monthly recurring costs land on the right days, including month ends. Tests `expandRecurring` directly.
+
+Opening 2027-01-01, horizon end 2027-03-31.
+
+| Cost | Frequency | Amount (RM) | `nextDate` | `endDate` | Expected dates |
+| --- | --- | --- | --- | --- | --- |
+| R1 Rent | MONTHLY | 3,000.00 | 2027-01-31 | none | ___ |
+| R2 Loan | MONTHLY | 1,500.00 | 2027-01-15 | 2027-02-28 | ___ |
+| R3 Casual wages | WEEKLY | 800.00 | 2027-03-05 | none | ___ |
