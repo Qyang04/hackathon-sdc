@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  addDays, addMonthsCapped, daysBetween, daysInMonth, expandRecurring, formatRM, normaliseExisting, normaliseProposal, rmToSen, runForecast, scenarioPresets, weekStart,
+  addDays, addMonthsCapped, compareProposal, daysBetween, daysInMonth, expandRecurring, formatRM, normaliseExisting, normaliseProposal, rmToSen, runForecast, scenarioPresets, weekStart,
 } from "./index";
 import type { CashEventInput, ForecastSettings, ProposalInput, RecurringCostInput } from "./index";
 
@@ -245,9 +245,52 @@ describe("runForecast", () => {
   });
 });
 
-// TODO(A): turn each todo into a real test with hand-calculated expected values
-// (write the calculation in docs/test-cases.md first, then the code).
-describe("forecast engine", () => {
-  it.todo("horizon extends to the proposal's last event");
-  it.todo("minBalanceDelta = withProposal.min - baseline.min");
+// Case 2 in docs/test-cases.md: opening RM 30,000.00, reserve RM 20,000.00, no existing events or recurring costs.
+describe("compareProposal", () => {
+  const settings: ForecastSettings = { openingCashSen: 3_000_000, openingDate: "2026-11-02", reserveSen: 2_000_000, minHorizonDays: 14 };
+  const case2 = (p1Sen: number): ProposalInput => ({
+    ...case3Proposal,
+    events: [{ ...case3Proposal.events[0], amountSen: p1Sen }, case3Proposal.events[1]],
+  });
+
+  it("Case 2: horizon extends to the proposal's last event", () => {
+    expect(compareProposal([], [], case2(1_000_000), settings, BASE).withProposal.horizonEnd).toBe("2026-11-23");
+  });
+
+  it("Case 2: equal to the reserve is not a breach; delta = withProposal.min - baseline.min", () => {
+    const r = compareProposal([], [], case2(1_000_000), settings, BASE);
+    expect([r.baseline.metrics.minBalanceSen, r.baseline.metrics.minBalanceDate]).toEqual([3_000_000, "2026-11-02"]);
+    expect([r.withProposal.metrics.minBalanceSen, r.withProposal.metrics.minBalanceDate]).toEqual([2_000_000, "2026-11-03"]);
+    expect(r.withProposal.metrics.firstBreachDate).toBeNull();
+    expect(r.minBalanceDeltaSen).toBe(-1_000_000);
+    expect(r.mainContributors.map((c) => [c.sourceId, c.signedSen])).toEqual([["P1", -1_000_000]]);
+  });
+
+  it("Case 2b: one sen more is a breach", () => {
+    const r = compareProposal([], [], case2(1_000_001), settings, BASE);
+    expect(r.withProposal.metrics).toMatchObject({ minBalanceSen: 1_999_999, firstBreachDate: "2026-11-03", peakFundingNeedSen: 1 });
+    expect(r.minBalanceDeltaSen).toBe(-1_000_001);
+  });
+
+  it("Case 3: horizon, minimum and first breach per scenario", () => {
+    const summary = (s: typeof BASE) => {
+      const m = compareProposal([], [], case3Proposal, settings, s).withProposal;
+      return [m.horizonEnd, m.metrics.minBalanceSen, m.metrics.minBalanceDate, m.metrics.firstBreachDate];
+    };
+    expect(summary(BASE)).toEqual(["2026-11-23", 1_666_665, "2026-11-08", "2026-11-08"]);
+    expect(summary(DOWNSIDE)).toEqual(["2026-12-07", 1_533_331, "2026-11-08", "2026-11-03"]);
+    expect(summary(DEFERRED)).toEqual(["2026-12-23", 1_666_665, "2026-12-08", "2026-12-08"]);
+  });
+
+  it("recurring costs are not increased by the downside scenario", () => {
+    const rent: RecurringCostInput = { id: "R", label: "Rent", amountSen: 100_000, frequency: "MONTHLY", nextDate: "2026-11-05", endDate: null };
+    const r = compareProposal([], [rent], case3Proposal, settings, DOWNSIDE);
+    expect(r.baseline.events.map((e) => e.signedSen)).toEqual([-100_000, -100_000]); // 5 Nov and 5 Dec, both unchanged
+  });
+
+  it("carries normalisation warnings into the results", () => {
+    const r = compareProposal(case1Events, [], case3Proposal, settings, BASE);
+    expect(r.baseline.warnings.map((w) => w.code)).toContain("OVERDUE_MOVED_TO_DAY0");
+    expect(r.withProposal.warnings.map((w) => w.code)).toContain("OVERDUE_MOVED_TO_DAY0");
+  });
 });

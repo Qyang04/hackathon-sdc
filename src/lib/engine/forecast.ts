@@ -5,6 +5,7 @@ import type {
   CashEventInput,
   DailyPoint,
   ComparisonResult,
+  Contributor,
   EngineWarning,
   ForecastResult,
   ForecastSettings,
@@ -15,12 +16,6 @@ import type {
   WeeklyPoint,
 } from "./types";
 import { addDays, addMonthsCapped, weekStart } from "./dates";
-
-export class NotImplementedError extends Error {
-  constructor(what: string) {
-    super(`${what} is not implemented yet`);
-  }
-}
 
 /**
  * Expand recurring costs into dated OUT events up to horizonEnd (or the cost's endDate, whichever is first).
@@ -213,13 +208,44 @@ export function runForecast(
   };
 }
 
-/** Baseline vs with-proposal under one scenario. This is what the API calls. */
+/**
+ * Baseline (existing + recurring) vs with-proposal (baseline + proposal) under one scenario. This is what the API calls.
+ * Horizon = the later of openingDate + minHorizonDays - 1 and the proposal's last (scenario-adjusted) event.
+ * Recurring costs are not changed by the scenario (DECISIONS 2026-10-21).
+ */
 export function compareProposal(
-  _existing: CashEventInput[],
-  _recurring: RecurringCostInput[],
-  _proposal: ProposalInput,
-  _settings: ForecastSettings,
-  _scenario: ScenarioParams,
+  existing: CashEventInput[],
+  recurring: RecurringCostInput[],
+  proposal: ProposalInput,
+  settings: ForecastSettings,
+  scenario: ScenarioParams,
 ): ComparisonResult {
-  throw new NotImplementedError("compareProposal");
+  const ex = normaliseExisting(existing, settings, scenario);
+  const prop = normaliseProposal(proposal, scenario);
+
+  let horizonEnd = addDays(settings.openingDate, settings.minHorizonDays - 1);
+  for (const e of prop.events) if (e.date > horizonEnd) horizonEnd = e.date;
+
+  const rec = expandRecurring(recurring, settings.openingDate, horizonEnd);
+  const baselineRun = runForecast([...ex.events, ...rec], settings, horizonEnd);
+  const withRun = runForecast([...ex.events, ...rec, ...prop.events], settings, horizonEnd);
+  const baseline = { ...baselineRun, warnings: [...ex.warnings, ...baselineRun.warnings] };
+  const withProposal = { ...withRun, warnings: [...ex.warnings, ...prop.warnings, ...withRun.warnings] };
+
+  // Main contributors: largest movements (by absolute value) in the 14 days up to and including the minimum date
+  const minDate = withProposal.metrics.minBalanceDate;
+  const windowStart = addDays(minDate, -13);
+  const mainContributors: Contributor[] = withProposal.events
+    .filter((e) => e.date >= windowStart && e.date <= minDate)
+    .sort((a, b) => Math.abs(b.signedSen) - Math.abs(a.signedSen) || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .slice(0, 5)
+    .map((e) => ({ sourceId: e.sourceId, label: e.label, date: e.date, signedSen: e.signedSen }));
+
+  return {
+    scenario,
+    baseline,
+    withProposal,
+    minBalanceDeltaSen: withProposal.metrics.minBalanceSen - baseline.metrics.minBalanceSen,
+    mainContributors,
+  };
 }
