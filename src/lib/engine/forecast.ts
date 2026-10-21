@@ -12,6 +12,7 @@ import type {
   RecurringCostInput,
   ScenarioParams,
 } from "./types";
+import { addDays, addMonthsCapped } from "./dates";
 
 export class NotImplementedError extends Error {
   constructor(what: string) {
@@ -19,13 +20,35 @@ export class NotImplementedError extends Error {
   }
 }
 
-/** Expand recurring costs into dated OUT events between openingDate and horizonEnd (inclusive). */
+/**
+ * Expand recurring costs into dated OUT events up to horizonEnd (or the cost's endDate, whichever is first).
+ * Monthly costs keep their original day, capped at short months (DECISIONS 2026-10-21).
+ * Occurrences before openingDate are unpaid, so they move to openingDate and are flagged overdue.
+ */
 export function expandRecurring(
-  _costs: RecurringCostInput[],
-  _openingDate: string,
-  _horizonEnd: string,
+  costs: RecurringCostInput[],
+  openingDate: string,
+  horizonEnd: string,
 ): NormalisedEvent[] {
-  throw new NotImplementedError("expandRecurring");
+  const out: NormalisedEvent[] = [];
+  for (const c of costs) {
+    const stop = c.endDate && c.endDate < horizonEnd ? c.endDate : horizonEnd;
+    // n counts occurrences from 0; each date is computed from nextDate, never from the previous date
+    for (let n = 0; ; n++) {
+      const date = c.frequency === "WEEKLY" ? addDays(c.nextDate, 7 * n) : addMonthsCapped(c.nextDate, n);
+      if (date > stop) break; // YYYY-MM-DD strings sort in date order
+      const overdue = date < openingDate;
+      out.push({
+        sourceId: `${c.id}#${n}`,
+        kind: "RECURRING",
+        date: overdue ? openingDate : date,
+        signedSen: -c.amountSen,
+        label: c.label,
+        overdue,
+      });
+    }
+  }
+  return out;
 }
 
 /**
