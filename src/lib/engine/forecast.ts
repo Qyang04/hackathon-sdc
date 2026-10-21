@@ -55,13 +55,55 @@ export function expandRecurring(
  * Turn existing events into the movements the forecast uses:
  * CANCELLED -> dropped; PAID -> dropped (already in opening cash);
  * remaining amount = amountSen - paidSen; dated before openingDate and unpaid -> moved to day 0 + warning.
+ * Scenario: unconfirmed receipts may be left out; ESTIMATED receipts are delayed (from day 0 if overdue);
+ * unpaid OUT amounts get the cost increase.
  */
 export function normaliseExisting(
-  _events: CashEventInput[],
-  _settings: ForecastSettings,
-  _scenario: ScenarioParams,
+  events: CashEventInput[],
+  settings: ForecastSettings,
+  scenario: ScenarioParams,
 ): { events: NormalisedEvent[]; warnings: EngineWarning[] } {
-  throw new NotImplementedError("normaliseExisting");
+  const out: NormalisedEvent[] = [];
+  const warnings: EngineWarning[] = [];
+
+  for (const e of events) {
+    if (e.status === "CANCELLED" || e.status === "PAID") continue;
+    const remaining = e.amountSen - e.paidSen;
+    if (remaining <= 0) continue;
+
+    if (e.direction === "IN" && !e.confirmed && scenario.excludeUnconfirmedReceipts) {
+      warnings.push({ code: "UNCONFIRMED_EXCLUDED", sourceId: e.id, message: `"${e.label}" is not confirmed, so this scenario leaves it out.` });
+      continue;
+    }
+
+    // Overdue first, then the scenario delay, so a late receipt is delayed from today (DECISIONS 2026-10-21)
+    const overdue = e.date < settings.openingDate;
+    if (overdue) {
+      warnings.push({
+        code: "OVERDUE_MOVED_TO_DAY0",
+        sourceId: e.id,
+        message: `"${e.label}" was due ${e.date} and is not paid, so it is counted on ${settings.openingDate}.`,
+      });
+    }
+    let date = overdue ? settings.openingDate : e.date;
+    if (e.direction === "IN" && e.confidence === "ESTIMATED") date = addDays(date, scenario.receiptDelayDays);
+
+    const amount = e.direction === "OUT" ? increaseByPct(remaining, scenario.costIncreasePct) : remaining;
+    out.push({
+      sourceId: e.id,
+      kind: "EXISTING",
+      date,
+      signedSen: e.direction === "IN" ? amount : -amount,
+      label: e.label,
+      overdue,
+    });
+  }
+  return { events: out, warnings };
+}
+
+/** sen x (100 + pct)%, rounded half up to whole sen, in integer arithmetic (pct is a whole number). */
+function increaseByPct(sen: number, pct: number): number {
+  return Math.floor((sen * (100 + pct) + 50) / 100);
 }
 
 /** Materialise proposal events from offsets, applying startShiftDays and scenario rules. */
