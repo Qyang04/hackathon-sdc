@@ -12,8 +12,11 @@ import { loadLatestCheck } from "@/lib/runs";
 import { StatusPill } from "../../StatusPill";
 import { ResultView } from "./ResultView";
 import { RunCheckButton } from "./RunCheckButton";
+import { DecisionPanel } from "./DecisionPanel";
 
 export const dynamic = "force-dynamic";
+
+const DECISION_TEXT: Record<string, string> = { APPROVED: "Approved", REJECTED: "Declined", NEEDS_INFO: "Asked for more information" };
 
 export default async function RequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,6 +26,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
       include: {
         events: { orderBy: { offsetDays: "asc" } },
         activities: { orderBy: { createdAt: "desc" } },
+        decisions: { orderBy: { createdAt: "desc" } },
       },
     }),
     loadLatestCheck(id),
@@ -123,11 +127,22 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
 
       <div className="card">
         <h2>Owner decision</h2>
-        {/* TODO(C): decision buttons + reason once POST /decision exists; the server enforces canDecide */}
-        {canDecide(session) ? (
-          <p className="muted">Approve, decline or ask for more information here after the check has run.</p>
+        {request.decisions.map((d) => (
+          <p key={d.id}>
+            <strong>{DECISION_TEXT[d.outcome] ?? d.outcome}</strong> by {d.actorName},{" "}
+            {d.createdAt.toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}: {d.reason}
+            {d.selfApproved && <span className="muted small"> (decided by the person who created the request)</span>}
+          </p>
+        ))}
+        {request.status === "COMPLETED" && <p className="small">Acceptance sent for e-signature (simulated Orbyte eSign).</p>}
+        {request.status === "CHECKED" && check ? (
+          canDecide(session) ? (
+            <DecisionPanel requestId={request.id} forecastRunId={check.runId} />
+          ) : (
+            <p className="muted">Only the owner can decide on this commitment. You are viewing as {session.name}.</p>
+          )
         ) : (
-          <p className="muted">Only the owner can decide on this commitment. You are viewing as {session.name}.</p>
+          request.decisions.length === 0 && <p className="muted">A decision can be made once the check has run.</p>
         )}
       </div>
 
