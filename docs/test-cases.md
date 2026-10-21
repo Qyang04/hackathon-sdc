@@ -15,7 +15,8 @@ How to use this file:
 
 - Q1. Does the downside `costIncreasePct` apply to recurring costs (payroll, rent), or only to project OUT events?
 - Q2. If the downside receipt delay pushes an existing IN event past the horizon end, is it dropped with `EVENT_BEYOND_HORIZON`, or does the horizon extend?
-- Q3. Monthly recurring on the 31st: after February (28th), does March go back to the 31st? (CONTRACTS.md rule 3 suggests yes.)
+- Q3. Monthly recurring on the 31st: after February (28th), does March go back to the 31st? **Decided: yes.** Every month uses the original day, capped at the month's last day.
+- Q5. A recurring cost whose `nextDate` is before `openingDate`: ignore the missed occurrences, or count them? **Decided: count each missed occurrence on `openingDate`, flagged `overdue`** (same as CONTRACTS rule 2 for one-off events; ignoring them would overstate cash).
 - Q4. `excludeUnconfirmedReceipts`: validation already blocks unconfirmed AI events, so what does this rule ever drop?
 
 ## Case 1 — baseline: statuses, overdue, partial payment, recurring, daily vs weekly
@@ -116,6 +117,10 @@ Opening 2027-01-01, horizon end 2027-03-31.
 
 | Cost | Frequency | Amount (RM) | `nextDate` | `endDate` | Expected dates |
 | --- | --- | --- | --- | --- | --- |
-| R1 Rent | MONTHLY | 3,000.00 | 2027-01-31 | none | ___ |
-| R2 Loan | MONTHLY | 1,500.00 | 2027-01-15 | 2027-02-28 | ___ |
-| R3 Casual wages | WEEKLY | 800.00 | 2027-03-05 | none | ___ |
+| R1 Rent | MONTHLY | 3,000.00 | 2027-01-31 | none | 2027-01-31, 2027-02-28, 2027-03-31 |
+| R2 Loan | MONTHLY | 1,500.00 | 2027-01-15 | 2027-02-28 | 2027-01-15, 2027-02-15 |
+| R3 Casual wages | WEEKLY | 800.00 | 2027-03-05 | none | 2027-03-05, 2027-03-12, 2027-03-19, 2027-03-26 |
+| R4 Payroll (missed) | MONTHLY | 12,000.00 | 2026-12-28 | none | 2027-01-01 (overdue, was 2026-12-28), 2027-01-28, 2027-02-28, 2027-03-28 |
+
+Why: R1 shows Feb capped at the 28th and March back on the 31st (Q3). R2 stops because 2027-03-15 is after `endDate`.
+R3 stops because 2027-04-02 is after the horizon end. R4's 2026-12-28 occurrence is before the opening date, so it moves to day 0 (Q5).
