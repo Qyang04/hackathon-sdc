@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  addDays, addMonthsCapped, daysBetween, daysInMonth, expandRecurring, formatRM, normaliseExisting, normaliseProposal, rmToSen, scenarioPresets, weekStart,
+  addDays, addMonthsCapped, daysBetween, daysInMonth, expandRecurring, formatRM, normaliseExisting, normaliseProposal, rmToSen, runForecast, scenarioPresets, weekStart,
 } from "./index";
 import type { CashEventInput, ForecastSettings, ProposalInput, RecurringCostInput } from "./index";
 
@@ -185,14 +185,69 @@ describe("normaliseProposal", () => {
   });
 });
 
+describe("runForecast", () => {
+  const payroll: RecurringCostInput = { id: "R1", label: "Payroll", amountSen: 1_200_000, frequency: "MONTHLY", nextDate: "2026-11-13", endDate: null };
+  const case1 = () => {
+    const existing = normaliseExisting(case1Events, case1Settings, BASE).events;
+    const recurring = expandRecurring([payroll], "2026-11-02", "2026-11-15");
+    return runForecast([...existing, ...recurring], case1Settings, "2026-11-15");
+  };
+
+  it("Case 1: daily balances match the hand calculation", () => {
+    const moving = case1().days.filter((d) => d.inSen || d.outSen).map((d) => [d.date, d.inSen, d.outSen, d.closingSen]);
+    expect(moving).toEqual([
+      ["2026-11-02", 0, 400_000, 4_600_000],
+      ["2026-11-04", 0, 1_500_000, 3_100_000],
+      ["2026-11-06", 0, 300_000, 2_800_000],
+      ["2026-11-09", 1_000_000, 0, 3_800_000],
+      ["2026-11-13", 0, 1_200_000, 2_600_000],
+      ["2026-11-14", 500_000, 0, 3_100_000],
+    ]);
+    expect(case1().days).toHaveLength(14);
+  });
+
+  it("Case 1: weekly roll-up", () => {
+    expect(case1().weeks).toEqual([
+      { weekStart: "2026-11-02", inSen: 0, outSen: 2_200_000, closingSen: 2_800_000, lowestDailySen: 2_800_000 },
+      { weekStart: "2026-11-09", inSen: 1_500_000, outSen: 1_200_000, closingSen: 3_100_000, lowestDailySen: 2_600_000 },
+    ]);
+  });
+
+  it("Case 1: minimum comes from daily values, not weekly closings; peak funding need = reserve - min", () => {
+    expect(case1().metrics).toEqual({
+      minBalanceSen: 2_600_000, // weekly closings are 28,000 and 31,000; the true low is 26,000 mid-week
+      minBalanceDate: "2026-11-13",
+      firstBreachDate: "2026-11-06",
+      peakFundingNeedSen: 400_000,
+    });
+  });
+
+  it("Case 1: an event after the horizon is left out with a warning", () => {
+    const r = case1();
+    expect(r.events.map((e) => e.sourceId)).not.toContain("E8");
+    expect(r.warnings.map((w) => [w.code, w.sourceId])).toEqual([["EVENT_BEYOND_HORIZON", "E8"]]);
+  });
+
+  it("balance exactly equal to the reserve is not a breach; one sen below is", () => {
+    const settings: ForecastSettings = { openingCashSen: 3_000_000, openingDate: "2026-11-02", reserveSen: 2_000_000, minHorizonDays: 14 };
+    const out = (sen: number) => [{ sourceId: "X", kind: "PROPOSAL" as const, date: "2026-11-03", signedSen: -sen, label: "X", overdue: false }];
+    expect(runForecast(out(1_000_000), settings, "2026-11-15").metrics.firstBreachDate).toBeNull();
+    expect(runForecast(out(1_000_001), settings, "2026-11-15").metrics.firstBreachDate).toBe("2026-11-03");
+  });
+
+  it("ties on the minimum take the earliest date", () => {
+    const settings: ForecastSettings = { openingCashSen: 1_000, openingDate: "2026-11-02", reserveSen: 0, minHorizonDays: 3 };
+    expect(runForecast([], settings, "2026-11-04").metrics.minBalanceDate).toBe("2026-11-02");
+  });
+
+  it("identical inputs give identical outputs", () => {
+    expect(case1()).toEqual(case1());
+  });
+});
+
 // TODO(A): turn each todo into a real test with hand-calculated expected values
 // (write the calculation in docs/test-cases.md first, then the code).
 describe("forecast engine", () => {
-  it.todo("baseline daily balances match a hand calculation");
-  it.todo("minimum balance is taken from daily values, not weekly totals");
-  it.todo("balance exactly equal to the reserve is not a breach; one sen below is");
-  it.todo("peakFundingNeed = max(0, reserve - minBalance)");
   it.todo("horizon extends to the proposal's last event");
-  it.todo("identical inputs give identical outputs");
   it.todo("minBalanceDelta = withProposal.min - baseline.min");
 });

@@ -3,6 +3,7 @@
 // Spec: docs/CONTRACTS.md "Engine rules" and the test list in forecast.test.ts.
 import type {
   CashEventInput,
+  DailyPoint,
   ComparisonResult,
   EngineWarning,
   ForecastResult,
@@ -11,8 +12,9 @@ import type {
   ProposalInput,
   RecurringCostInput,
   ScenarioParams,
+  WeeklyPoint,
 } from "./types";
-import { addDays, addMonthsCapped } from "./dates";
+import { addDays, addMonthsCapped, weekStart } from "./dates";
 
 export class NotImplementedError extends Error {
   constructor(what: string) {
@@ -138,13 +140,77 @@ export function normaliseProposal(
   return { events: out, warnings };
 }
 
-/** Daily running balance from openingCash over the horizon, plus weekly roll-up and metrics. */
+/**
+ * Daily running balance from openingCash over openingDate..horizonEnd: closing[d] = closing[d-1] + in[d] - out[d].
+ * Events after horizonEnd are left out with EVENT_BEYOND_HORIZON. Weeks (Monday start) are a roll-up for display.
+ */
 export function runForecast(
-  _events: NormalisedEvent[],
-  _settings: ForecastSettings,
-  _horizonEnd: string,
+  events: NormalisedEvent[],
+  settings: ForecastSettings,
+  horizonEnd: string,
 ): ForecastResult {
-  throw new NotImplementedError("runForecast");
+  const warnings: EngineWarning[] = [];
+  const included: NormalisedEvent[] = [];
+  for (const e of events) {
+    if (e.date < settings.openingDate) throw new Error(`Event ${e.sourceId} is before the opening date; normalise it first`);
+    if (e.date > horizonEnd) {
+      warnings.push({ code: "EVENT_BEYOND_HORIZON", sourceId: e.sourceId, message: `"${e.label}" on ${e.date} is after the forecast ends (${horizonEnd}).` });
+    } else {
+      included.push(e);
+    }
+  }
+
+  // 1. Total IN and OUT per day
+  const inByDay = new Map<string, number>();
+  const outByDay = new Map<string, number>();
+  for (const e of included) {
+    const totals = e.signedSen >= 0 ? inByDay : outByDay;
+    totals.set(e.date, (totals.get(e.date) ?? 0) + Math.abs(e.signedSen));
+  }
+
+  // 2. Walk every day, carrying the balance forward
+  const days: DailyPoint[] = [];
+  let balance = settings.openingCashSen;
+  for (let date = settings.openingDate; date <= horizonEnd; date = addDays(date, 1)) {
+    const inSen = inByDay.get(date) ?? 0;
+    const outSen = outByDay.get(date) ?? 0;
+    balance = balance + inSen - outSen;
+    days.push({ date, inSen, outSen, closingSen: balance });
+  }
+
+  // 3. Weekly roll-up: sums, last closing and lowest daily closing in each Monday-start week
+  const weeks: WeeklyPoint[] = [];
+  for (const d of days) {
+    const ws = weekStart(d.date);
+    const w = weeks[weeks.length - 1];
+    if (w && w.weekStart === ws) {
+      w.inSen += d.inSen;
+      w.outSen += d.outSen;
+      w.closingSen = d.closingSen;
+      w.lowestDailySen = Math.min(w.lowestDailySen, d.closingSen);
+    } else {
+      weeks.push({ weekStart: ws, inSen: d.inSen, outSen: d.outSen, closingSen: d.closingSen, lowestDailySen: d.closingSen });
+    }
+  }
+
+  // 4. Metrics from daily values: lowest balance (earliest day if tied), first day strictly below the reserve
+  let minDay = days[0];
+  for (const d of days) if (d.closingSen < minDay.closingSen) minDay = d;
+  const firstBreach = days.find((d) => d.closingSen < settings.reserveSen);
+
+  return {
+    horizonEnd,
+    days,
+    weeks,
+    metrics: {
+      minBalanceSen: minDay.closingSen,
+      minBalanceDate: minDay.date,
+      firstBreachDate: firstBreach ? firstBreach.date : null,
+      peakFundingNeedSen: Math.max(0, settings.reserveSen - minDay.closingSen),
+    },
+    events: included.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+    warnings,
+  };
 }
 
 /** Baseline vs with-proposal under one scenario. This is what the API calls. */
