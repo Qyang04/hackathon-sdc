@@ -24,4 +24,54 @@ export const simulatedESign: OrbyteESignAdapter = {
   },
 };
 
-// TODO(B): seeded implementations of OrbyteProjectsAdapter and OrbyteAccountingAdapter backed by Prisma.
+// Seeded implementations backed by Prisma (simulated Orbyte data).
+
+import { prisma } from "../db";
+
+export const simulatedProjects: OrbyteProjectsAdapter = {
+  async listActiveProjects() {
+    const projects = await prisma.project.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true, client: true, status: true },
+      orderBy: { startDate: "asc" },
+    });
+    return projects;
+  },
+};
+
+export const simulatedAccounting: OrbyteAccountingAdapter = {
+  async listCashEvents() {
+    const events = await prisma.cashEvent.findMany({
+      where: { requestId: null }, // Only existing events, not proposal events
+      orderBy: { date: "asc" },
+    });
+    // Map to CashEventInput (date is required for existing events)
+    return events
+      .filter((e): e is typeof e & { date: string } => e.date !== null)
+      .map((e) => ({
+        id: e.id,
+        projectId: e.projectId,
+        direction: e.direction as "IN" | "OUT",
+        amountSen: e.amountSen,
+        paidSen: e.paidSen,
+        date: e.date,
+        status: e.status as "PLANNED" | "COMMITTED" | "PAID" | "CANCELLED",
+        confidence: e.confidence as "CONFIRMED" | "ESTIMATED",
+        label: e.label,
+        source: e.source as "SEEDED" | "MANUAL" | "AI_EXTRACTED",
+        confirmed: e.confirmed,
+      }));
+  },
+
+  async listRecurringCosts() {
+    const costs = await prisma.recurringCost.findMany();
+    return costs.map((c) => ({
+      id: c.id,
+      label: c.label,
+      amountSen: c.amountSen,
+      frequency: c.frequency as "WEEKLY" | "MONTHLY",
+      nextDate: c.nextDate,
+      endDate: c.endDate,
+    }));
+  },
+};
