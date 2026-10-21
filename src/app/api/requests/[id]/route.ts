@@ -1,7 +1,10 @@
 // GET   /api/requests/:id -> request + events + latest forecast run + decisions + activity
 // PATCH /api/requests/:id -> edit draft fields / confirm AI-extracted events (logs EVENT_CONFIRMED)
+//                            / add manual events (EVENT_ADDED) / remove proposal events (EVENT_REMOVED)
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { ManualEvent } from "../schemas";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -47,8 +50,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Request cannot be edited in this status" }, { status: 400 });
   }
 
-  const { confirmEventIds, ...fields } = body as {
+  const { confirmEventIds, addEvents, removeEventIds, ...fields } = body as {
     confirmEventIds?: string[];
+    addEvents?: unknown;
+    removeEventIds?: string[];
     title?: string;
     client?: string;
     startDate?: string;
@@ -57,6 +62,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     budgetSen?: number;
     justification?: string;
   };
+
+  // Validate new events before writing anything, so a bad body changes nothing
+  const parsedAdd = addEvents === undefined ? null : z.array(ManualEvent).safeParse(addEvents);
+  if (parsedAdd && !parsedAdd.success) {
+    return NextResponse.json({ error: "Invalid events", issues: parsedAdd.error.issues }, { status: 400 });
+  }
 
   // Confirm AI-extracted events
   if (confirmEventIds && Array.isArray(confirmEventIds) && confirmEventIds.length > 0) {
@@ -77,6 +88,40 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         detail: `Confirmed event ${eventId}`,
       });
     }
+  }
+
+  // Add manual events (manual entry is always available, e.g. when AI is unavailable)
+  if (parsedAdd?.success) {
+    const { getSession } = await import("@/lib/session");
+    const { logActivity } = await import("@/lib/audit");
+    const session = await getSession();
+
+    for (const e of parsedAdd.data) {
+      await prisma.cashEvent.create({
+        data: { ...e, requestId: id, status: "PLANNED", source: "MANUAL", confirmed: true },
+      });
+      await logActivity({
+        requestId: id,
+        actor: session.name,
+        action: "EVENT_ADDED",
+        detail: `Added ${e.direction === "IN" ? "receipt" : "payment"} "${e.label}", day ${e.offsetDays}`,
+      });
+    }
+  }
+
+  // Remove proposal events (e.g. a wrong AI suggestion); only this request's events
+  if (removeEventIds && Array.isArray(removeEventIds) && removeEventIds.length > 0) {
+    const { getSession } = await import("@/lib/session");
+    const { logActivity } = await import("@/lib/audit");
+    const session = await getSession();
+
+    const removed = await prisma.cashEvent.deleteMany({ where: { id: { in: removeEventIds }, requestId: id } });
+    await logActivity({
+      requestId: id,
+      actor: session.name,
+      action: "EVENT_REMOVED",
+      detail: `Removed ${removed.count} payment(s)`,
+    });
   }
 
   // Update draft fields if any provided
