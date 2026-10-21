@@ -81,12 +81,12 @@ Case 2b: same as Case 2, but P1 = RM 10,000.01.
 
 | | Case 2 | Case 2b |
 | --- | --- | --- |
-| Horizon end | | |
-| Baseline min balance / date | | |
-| With-proposal min balance / date | | |
-| First breach (with proposal) | | |
-| `minBalanceDeltaSen` | | |
-| Main contributors (top 5, by absolute value) | | |
+| Horizon end | 2026-11-23 (P2 is after 2026-11-15, so the horizon extends) | 2026-11-23 |
+| Baseline min balance / date | 30,000.00 / 2026-11-02 (nothing moves; earliest day wins the tie) | 30,000.00 / 2026-11-02 |
+| With-proposal min balance / date | 20,000.00 / 2026-11-03 | 19,999.99 / 2026-11-03 |
+| First breach (with proposal) | none (equal to the reserve is not below it) | 2026-11-03 |
+| `minBalanceDeltaSen` | -10,000.00 (20,000.00 - 30,000.00) | -10,000.01 |
+| Main contributors (top 5, by absolute value) | P1 -10,000.00 (window 2026-10-21 to 2026-11-03) | P1 -10,000.01 |
 
 ## Case 3 — scenarios: downside and deferred start
 
@@ -114,9 +114,12 @@ Rounding check: P3 under DOWNSIDE = 333,335 sen x 1.10 = 366,668.5 sen → round
 
 | | BASE | DOWNSIDE | DEFERRED_START |
 | --- | --- | --- | --- |
-| Horizon end | | | |
-| With-proposal min balance / date | | | |
-| First breach | | | |
+| Horizon end | 2026-11-23 | 2026-12-07 | 2026-12-23 |
+| With-proposal min balance / date | 16,666.65 / 2026-11-08 | 15,333.31 / 2026-11-08 | 16,666.65 / 2026-12-08 |
+| First breach | 2026-11-08 | 2026-11-03 (30,000.00 - 11,000.00 = 19,000.00) | 2026-12-08 |
+
+Working: BASE 30,000.00 - 10,000.00 = 20,000.00 (3 Nov, not a breach), - 3,333.35 = 16,666.65 (8 Nov).
+DOWNSIDE 30,000.00 - 11,000.00 = 19,000.00 (3 Nov), - 3,666.69 = 15,333.31 (8 Nov).
 
 ## Case 4 — recurring expansion only (no balance table)
 
