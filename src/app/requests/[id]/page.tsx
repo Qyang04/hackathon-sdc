@@ -8,13 +8,16 @@ import { prisma } from "@/lib/db";
 import { getSession, canDecide } from "@/lib/session";
 import { formatRM } from "@/lib/engine/money";
 import { addDays } from "@/lib/engine/dates";
+import { loadLatestCheck } from "@/lib/runs";
 import { StatusPill } from "../../StatusPill";
+import { ResultView } from "./ResultView";
+import { RunCheckButton } from "./RunCheckButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function RequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [request, latestRun, session] = await Promise.all([
+  const [request, check, company, session] = await Promise.all([
     prisma.commitmentRequest.findUnique({
       where: { id },
       include: {
@@ -22,7 +25,8 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
         activities: { orderBy: { createdAt: "desc" } },
       },
     }),
-    prisma.forecastRun.findFirst({ where: { requestId: id }, orderBy: { createdAt: "desc" } }),
+    loadLatestCheck(id),
+    prisma.companySettings.findUnique({ where: { id: 1 } }),
     getSession(),
   ]);
   if (!request) notFound();
@@ -57,13 +61,29 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
 
       <div className="card">
         <h2>Result</h2>
-        {latestRun ? (
-          // TODO(C): render ComparisonResult / PolicyResult / brief once POST /forecast saves runs
-          <p className="muted">Check ran on {latestRun.createdAt.toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}.</p>
+        {check ? (
+          <p className="muted small">Checked {check.createdAt.toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}.</p>
         ) : (
-          <p className="muted">The check has not been run yet. The cash forecast will appear here once it runs.</p>
+          <p className="muted">The check has not been run yet.</p>
+        )}
+        {check && check.validation.length > 0 && (
+          <ul className="small">
+            {check.validation.map((v, i) => (
+              <li key={i} style={{ color: v.severity === "ERROR" ? "var(--danger)" : "var(--warn)" }}>
+                {v.severity === "ERROR" ? "Must fix: " : "Note: "}
+                {v.message}
+              </li>
+            ))}
+          </ul>
+        )}
+        {(request.status === "DRAFT" || request.status === "NEEDS_INFO") && (
+          <RunCheckButton requestId={request.id} label={check ? "Run the check again" : "Run the check"} />
         )}
       </div>
+
+      {check && check.comparisons.length > 0 && company && (
+        <ResultView comparisons={check.comparisons} policy={check.policy} brief={check.brief} reserveSen={company.reserveSen} />
+      )}
 
       <div className="card overflow">
         <h2>Payments for this job</h2>
