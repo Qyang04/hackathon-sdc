@@ -13,9 +13,11 @@ How to use this file:
 
 ## Open questions (decide with the team before calculating, then record in DECISIONS.md)
 
-- Q1. Does the downside `costIncreasePct` apply to recurring costs (payroll, rent), or only to project OUT events?
+- Q1. Does the downside `costIncreasePct` apply to recurring costs (payroll, rent), or only to project OUT events? **Decided: only project and one-off OUT events.** Payroll and rent are fixed amounts.
 - Q2. If the downside receipt delay pushes an existing IN event past the horizon end, is it dropped with `EVENT_BEYOND_HORIZON`, or does the horizon extend?
-- Q3. Monthly recurring on the 31st: after February (28th), does March go back to the 31st? (CONTRACTS.md rule 3 suggests yes.)
+- Q3. Monthly recurring on the 31st: after February (28th), does March go back to the 31st? **Decided: yes.** Every month uses the original day, capped at the month's last day.
+- Q5. A recurring cost whose `nextDate` is before `openingDate`: ignore the missed occurrences, or count them? **Decided: count each missed occurrence on `openingDate`, flagged `overdue`** (same as CONTRACTS rule 2 for one-off events; ignoring them would overstate cash).
+- Q6. Downside on an overdue estimated receipt: delay from its original date, or from day 0? **Decided: from day 0** (move overdue to day 0 first, then add the delay). It is already late, so assuming it arrives today would be optimistic.
 - Q4. `excludeUnconfirmedReceipts`: validation already blocks unconfirmed AI events, so what does this rule ever drop?
 
 ## Case 1 — baseline: statuses, overdue, partial payment, recurring, daily vs weekly
@@ -42,19 +44,24 @@ Daily table (days with movement only):
 
 | Date | What moves (and why) | In (RM) | Out (RM) | Closing (RM) |
 | --- | --- | --- | --- | --- |
-| 2026-11-02 | opening + ___ | | | |
-| | | | | |
+| 2026-11-02 | opening 50,000.00; E1 was due 2026-10-28, unpaid, so it moves to day 0 | | 4,000.00 | 46,000.00 |
+| 2026-11-04 | E2 | | 15,000.00 | 31,000.00 |
+| 2026-11-06 | E4: 5,000.00 minus 2,000.00 already paid | | 3,000.00 | 28,000.00 |
+| 2026-11-09 | E6 | 10,000.00 | | 38,000.00 |
+| 2026-11-13 | R1 payroll | | 12,000.00 | 26,000.00 |
+| 2026-11-14 | E7 | 5,000.00 | | 31,000.00 |
 
 Weekly roll-up:
 
 | Week start | In (RM) | Out (RM) | Closing (RM) | Lowest daily (RM) |
 | --- | --- | --- | --- | --- |
-| 2026-11-02 | | | | |
-| 2026-11-09 | | | | |
+| 2026-11-02 | 0.00 | 22,000.00 | 28,000.00 | 28,000.00 |
+| 2026-11-09 | 15,000.00 | 12,000.00 | 31,000.00 | 26,000.00 |
 
-Expected: minimum balance RM ___ on ____-__-__; first breach ____-__-__ or none; peak funding need RM ___.
-Warnings (code + event id): ___.
-Ignored events and why: ___.
+Expected: minimum balance RM 26,000.00 on 2026-11-13; first breach 2026-11-06 (28,000.00 is below 30,000.00); peak funding need RM 4,000.00 (30,000.00 - 26,000.00).
+The lowest weekly closing is 28,000.00, but the true minimum is 26,000.00 mid-week: this is why the minimum comes from daily values.
+Warnings (code + event id): OVERDUE_MOVED_TO_DAY0 (E1); EVENT_BEYOND_HORIZON (E8, dated 2026-11-20, after the horizon end 2026-11-15).
+Ignored events and why: E3 is PAID (already inside opening cash); E5 is CANCELLED.
 
 ## Case 2 — proposal: reserve equality, one sen below, horizon extension, delta
 
@@ -74,12 +81,12 @@ Case 2b: same as Case 2, but P1 = RM 10,000.01.
 
 | | Case 2 | Case 2b |
 | --- | --- | --- |
-| Horizon end | | |
-| Baseline min balance / date | | |
-| With-proposal min balance / date | | |
-| First breach (with proposal) | | |
-| `minBalanceDeltaSen` | | |
-| Main contributors (top 5, by absolute value) | | |
+| Horizon end | 2026-11-23 (P2 is after 2026-11-15, so the horizon extends) | 2026-11-23 |
+| Baseline min balance / date | 30,000.00 / 2026-11-02 (nothing moves; earliest day wins the tie) | 30,000.00 / 2026-11-02 |
+| With-proposal min balance / date | 20,000.00 / 2026-11-03 | 19,999.99 / 2026-11-03 |
+| First breach (with proposal) | none (equal to the reserve is not below it) | 2026-11-03 |
+| `minBalanceDeltaSen` | -10,000.00 (20,000.00 - 30,000.00) | -10,000.01 |
+| Main contributors (top 5, by absolute value) | P1 -10,000.00 (window 2026-10-21 to 2026-11-03) | P1 -10,000.01 |
 
 ## Case 3 — scenarios: downside and deferred start
 
@@ -96,17 +103,23 @@ Scenarios (from `scenarioPresets(14, 30)`): DOWNSIDE = receipts +14 days, costs 
 
 | Event | BASE date / amount | DOWNSIDE date / amount | DEFERRED_START date / amount |
 | --- | --- | --- | --- |
-| P1 | | | |
-| P2 | | | |
-| P3 | | | |
+| P1 | 2026-11-03 / 10,000.00 | 2026-11-03 / 11,000.00 | 2026-12-03 / 10,000.00 |
+| P2 | 2026-11-23 / 25,000.00 | 2026-12-07 / 25,000.00 | 2026-12-23 / 25,000.00 |
+| P3 | 2026-11-08 / 3,333.35 | 2026-11-08 / 3,666.69 | 2026-12-08 / 3,333.35 |
 
-Rounding check: P3 under DOWNSIDE = 333,335 sen x 1.10 = ___ sen → rounded half up = ___ sen.
+Why: date = start 2026-11-03 + startShiftDays + offset. DOWNSIDE delays only P2 (an ESTIMATED receipt) by 14 days and
+adds 10% to P1 and P3 (OUT). DEFERRED_START moves every event 30 days. P3 is ESTIMATED but OUT, so it is not delayed.
+
+Rounding check: P3 under DOWNSIDE = 333,335 sen x 1.10 = 366,668.5 sen → rounded half up = 366,669 sen.
 
 | | BASE | DOWNSIDE | DEFERRED_START |
 | --- | --- | --- | --- |
-| Horizon end | | | |
-| With-proposal min balance / date | | | |
-| First breach | | | |
+| Horizon end | 2026-11-23 | 2026-12-07 | 2026-12-23 |
+| With-proposal min balance / date | 16,666.65 / 2026-11-08 | 15,333.31 / 2026-11-08 | 16,666.65 / 2026-12-08 |
+| First breach | 2026-11-08 | 2026-11-03 (30,000.00 - 11,000.00 = 19,000.00) | 2026-12-08 |
+
+Working: BASE 30,000.00 - 10,000.00 = 20,000.00 (3 Nov, not a breach), - 3,333.35 = 16,666.65 (8 Nov).
+DOWNSIDE 30,000.00 - 11,000.00 = 19,000.00 (3 Nov), - 3,666.69 = 15,333.31 (8 Nov).
 
 ## Case 4 — recurring expansion only (no balance table)
 
@@ -116,6 +129,10 @@ Opening 2027-01-01, horizon end 2027-03-31.
 
 | Cost | Frequency | Amount (RM) | `nextDate` | `endDate` | Expected dates |
 | --- | --- | --- | --- | --- | --- |
-| R1 Rent | MONTHLY | 3,000.00 | 2027-01-31 | none | ___ |
-| R2 Loan | MONTHLY | 1,500.00 | 2027-01-15 | 2027-02-28 | ___ |
-| R3 Casual wages | WEEKLY | 800.00 | 2027-03-05 | none | ___ |
+| R1 Rent | MONTHLY | 3,000.00 | 2027-01-31 | none | 2027-01-31, 2027-02-28, 2027-03-31 |
+| R2 Loan | MONTHLY | 1,500.00 | 2027-01-15 | 2027-02-28 | 2027-01-15, 2027-02-15 |
+| R3 Casual wages | WEEKLY | 800.00 | 2027-03-05 | none | 2027-03-05, 2027-03-12, 2027-03-19, 2027-03-26 |
+| R4 Payroll (missed) | MONTHLY | 12,000.00 | 2026-12-28 | none | 2027-01-01 (overdue, was 2026-12-28), 2027-01-28, 2027-02-28, 2027-03-28 |
+
+Why: R1 shows Feb capped at the 28th and March back on the 31st (Q3). R2 stops because 2027-03-15 is after `endDate`.
+R3 stops because 2027-04-02 is after the horizon end. R4's 2026-12-28 occurrence is before the opening date, so it moves to day 0 (Q5).

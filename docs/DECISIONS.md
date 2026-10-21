@@ -29,3 +29,7 @@ Record each team decision with date and who decided. Design decisions stay with 
 | 2026-10-21 | Build a brand-new repo; no code from earlier projects | T&C 5.3, 5.5 |
 | 2026-10-21 | Develop locally first, deploy to Replit in Phase 3 rehearsal and Phase 4 | Limited Replit credit; Replit is still compulsory |
 | 2026-10-21 | Next.js + TypeScript + Prisma, single app, no queue | Fits a 3-day build and a Replit deploy |
+| 2026-10-21 | Monthly recurring costs keep their original day each month, capped at the month's last day (31 Jan, 28 Feb, 31 Mar) | Matches CONTRACTS rule 3; avoids drifting to the 28th after February |
+| 2026-10-21 | Recurring occurrences dated before the opening date are counted on the opening date and flagged overdue | Same as one-off overdue events (rule 2); ignoring them would show more cash than reality |
+| 2026-10-21 | Downside: an overdue estimated receipt moves to the opening date first, then gets the customer delay | It is already late; assuming it arrives on day 0 would overstate cash |
+| 2026-10-21 | Downside cost increase applies to project and one-off OUT events, not to recurring costs (payroll, rent) | Recurring costs are fixed amounts |
