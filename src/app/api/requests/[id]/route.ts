@@ -137,6 +137,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await prisma.commitmentRequest.update({ where: { id }, data: updates });
   }
 
+  // Lifecycle: NEEDS_INFO --(edited)--> DRAFT, so the check can be run again
+  const edited = Object.keys(updates).length > 0 || parsedAdd?.success || (removeEventIds?.length ?? 0) > 0 || (confirmEventIds?.length ?? 0) > 0;
+  if (request.status === "NEEDS_INFO" && edited) {
+    await prisma.commitmentRequest.update({ where: { id }, data: { status: "DRAFT" } });
+    const { getSession } = await import("@/lib/session");
+    const { logActivity } = await import("@/lib/audit");
+    await logActivity({ requestId: id, actor: (await getSession()).name, action: "STATUS_CHANGED", detail: "Edited after needing info; back to draft" });
+  }
+
   // Return updated request
   const updated = await prisma.commitmentRequest.findUnique({
     where: { id },
