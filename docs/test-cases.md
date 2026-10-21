@@ -13,7 +13,7 @@ How to use this file:
 
 ## Open questions (decide with the team before calculating, then record in DECISIONS.md)
 
-- Q1. Does the downside `costIncreasePct` apply to recurring costs (payroll, rent), or only to project OUT events?
+- Q1. Does the downside `costIncreasePct` apply to recurring costs (payroll, rent), or only to project OUT events? **Decided: only project and one-off OUT events.** Payroll and rent are fixed amounts.
 - Q2. If the downside receipt delay pushes an existing IN event past the horizon end, is it dropped with `EVENT_BEYOND_HORIZON`, or does the horizon extend?
 - Q3. Monthly recurring on the 31st: after February (28th), does March go back to the 31st? **Decided: yes.** Every month uses the original day, capped at the month's last day.
 - Q5. A recurring cost whose `nextDate` is before `openingDate`: ignore the missed occurrences, or count them? **Decided: count each missed occurrence on `openingDate`, flagged `overdue`** (same as CONTRACTS rule 2 for one-off events; ignoring them would overstate cash).
@@ -103,11 +103,14 @@ Scenarios (from `scenarioPresets(14, 30)`): DOWNSIDE = receipts +14 days, costs 
 
 | Event | BASE date / amount | DOWNSIDE date / amount | DEFERRED_START date / amount |
 | --- | --- | --- | --- |
-| P1 | | | |
-| P2 | | | |
-| P3 | | | |
+| P1 | 2026-11-03 / 10,000.00 | 2026-11-03 / 11,000.00 | 2026-12-03 / 10,000.00 |
+| P2 | 2026-11-23 / 25,000.00 | 2026-12-07 / 25,000.00 | 2026-12-23 / 25,000.00 |
+| P3 | 2026-11-08 / 3,333.35 | 2026-11-08 / 3,666.69 | 2026-12-08 / 3,333.35 |
 
-Rounding check: P3 under DOWNSIDE = 333,335 sen x 1.10 = ___ sen → rounded half up = ___ sen.
+Why: date = start 2026-11-03 + startShiftDays + offset. DOWNSIDE delays only P2 (an ESTIMATED receipt) by 14 days and
+adds 10% to P1 and P3 (OUT). DEFERRED_START moves every event 30 days. P3 is ESTIMATED but OUT, so it is not delayed.
+
+Rounding check: P3 under DOWNSIDE = 333,335 sen x 1.10 = 366,668.5 sen → rounded half up = 366,669 sen.
 
 | | BASE | DOWNSIDE | DEFERRED_START |
 | --- | --- | --- | --- |
