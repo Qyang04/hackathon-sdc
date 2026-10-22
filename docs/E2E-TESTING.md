@@ -40,7 +40,7 @@ Open **http://localhost:3000** in your browser.
 **You should see**
 
 - [ ] Company name: **Contoh Renovation Sdn Bhd (synthetic)**
-- [ ] Navy banner: Cash in the bank **RM 180,000**, Lowest point next 13 weeks **RM 88,100** (5 Dec 2026), Safety buffer **RM 30,000**, Jobs above this always go to you **RM 50,000**
+- [ ] Navy banner: Cash in the bank **RM 190,000**, Lowest point next 13 weeks **RM 91,360** (5 Dec 2026), Safety buffer **RM 30,000**, Jobs above this always go to you **RM 50,000**
 - [ ] **Commitment checks**: "No checks yet"
 - [ ] **Active projects**: 3 projects (shoplot, office repaint, clinic)
 - [ ] **Money already promised**: a list of payments in and out, plus monthly/weekly costs (salaries, rent, etc.)
@@ -94,9 +94,10 @@ Click **Next: run the check**.
 **You should see** (top navy banner)
 
 - [ ] Yellow tag **NEEDS YOUR REVIEW**
-- [ ] Sentence: *As planned, your lowest cash is **RM 46,600** on 5 Dec 2026, above your RM 30,000 buffer. If things slip, it is **RM 17,750** on 1 Jan 2027, below the buffer.*
+- [ ] Sentence: *As planned, your lowest cash is **RM 49,860** on 5 Dec 2026, above your RM 30,000 buffer. If things slip, it is **RM 11,820** on 3 Jan 2027, below the buffer.*
 - [ ] A chart: white line = with this job, grey line = without, dashed line = your buffer
-- [ ] Three boxes under the chart: **As planned RM 46,600** · **If things slip RM 17,750** (red) · **Start later RM 73,050**
+- [ ] Three boxes under the chart: **As planned RM 49,860** · **If things slip RM 11,820** (red) · **Start later RM 65,120**
+- [ ] Yellow/amber warnings under the boxes (intended, not a bug): one overdue receipt moved to day 0, plus four "retention … is after the forecast ends" warnings from the 5% retention money released after the defects liability period
 - [ ] Click each box: the chart changes to that situation
 
 **Below the banner**
@@ -152,7 +153,7 @@ Still as **Staff** on the result page:
 **You should see**
 
 - [ ] Green tag **NO RULE TRIGGERED**
-- [ ] As planned **RM 86,100** · If things slip **RM 64,700** · Start later **RM 88,100**, all "above buffer"
+- [ ] As planned **RM 89,360** · If things slip **RM 54,630** · Start later **RM 91,360**, all "above buffer"
 - [ ] **Your rules**: green card "None of your rules were crossed."
 - [ ] The note says every job still needs the owner's decision
 

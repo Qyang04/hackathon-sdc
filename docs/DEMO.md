@@ -7,15 +7,18 @@ The figures below are guarded by `src/lib/demo/demo.test.ts`; if you change the 
 
 Contoh Renovation Sdn Bhd (synthetic), a small fit-out contractor.
 
-- Cash at the start of Mon 2 Nov 2026: **RM 180,000**. Safety buffer **RM 30,000**. Jobs above **RM 50,000** go to the owner.
+- Cash at the start of Mon 2 Nov 2026: **RM 190,000**. Safety buffer **RM 30,000**. Jobs above **RM 50,000** go to the owner.
 - Customers usually pay about **21 days** late (used in "If things slip").
 - 3 active projects: shoplot renovation (RM 180k), clinic fit-out (RM 240k), office repaint (RM 60k).
 - Fixed costs: salaries RM 32,000 on the 28th, EPF/SOCSO/EIS RM 5,200 by the 15th, rent RM 4,500 on the 1st,
-  lorry hire purchase RM 1,850 on the 5th, site workers RM 2,200 every Friday.
+  lorry hire purchase RM 1,850 on the 5th, site workers RM 2,200 every Friday; monthly utilities and internet RM 850 (3rd),
+  diesel and petrol RM 1,100 (10th), LHDN CP204 tax instalment RM 1,500 (20th), insurance (CAR and vehicles) RM 640 (25th).
 - The sample covers every case the engine handles: a paid claim and deposit (left out), a cancelled PO (left out),
   an overdue unpaid claim (moved to day 0), a half-paid subcontractor (only the unpaid half counts), estimated and
-  confirmed receipts.
-- Lowest cash over the next 13 weeks **without any new job: RM 88,100 on 5 Dec 2026** (overview banner).
+  confirmed receipts. Clients withhold **5% retention** on progress claims, released after the defects liability period
+  (one retention lands inside the horizon; the rest after it, so the app shows the `EVENT_BEYOND_HORIZON` warning).
+  Supplier POs can be split **deposit + balance** (see shoplot tiles).
+- Lowest cash over the next 13 weeks **without any new job: RM 91,360 on 5 Dec 2026** (overview banner).
 
 ## The job to check
 
@@ -53,9 +56,9 @@ Payments to end up with (confirm AI suggestions, or enter by hand if AI is unava
 
 | Situation | Lowest cash with the job | Below buffer from |
 | --- | --- | --- |
-| As planned | RM 46,600 on 5 Dec 2026 | stays above |
-| If things slip | RM 17,750 on 1 Jan 2027 | 24 Dec 2026 (extra cash needed RM 12,250) |
-| Start later | RM 73,050 on 11 Jan 2027 | stays above |
+| As planned | RM 49,860 on 5 Dec 2026 | stays above |
+| If things slip | RM 11,820 on 3 Jan 2027 | 24 Dec 2026 (extra cash needed RM 18,180) |
+| Start later | RM 65,120 on 11 Jan 2027 | stays above |
 
 Then: staff tries to decide (blocked), switch to Owner (Aisyah), give a reason, approve. The status becomes
 "Sent for signature" (simulated e-sign) and every step is in Activity.

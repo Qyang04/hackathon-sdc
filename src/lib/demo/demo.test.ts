@@ -2,7 +2,7 @@
 // "as planned: above the buffer, if things slip: below it", this fails before the video does.
 import { describe, expect, it } from "vitest";
 import { compareProposal, scenarioPresets } from "../engine";
-import type { CashEventInput, RecurringCostInput } from "../engine";
+import type { CashEventInput, ProposalInput, RecurringCostInput } from "../engine";
 import { evaluatePolicy } from "../policy/policy";
 import { DEMO_COMPANY as C, DEMO_EVENTS, DEMO_PROPOSAL as P, DEMO_RECURRING } from "./data";
 
@@ -48,9 +48,25 @@ describe("demo company data", () => {
   });
 
   it("matches the figures in the demo script", () => {
-    expect(base.baseline.metrics).toMatchObject({ minBalanceSen: 8_810_000, minBalanceDate: "2026-12-05" });
-    expect(base.withProposal.metrics).toMatchObject({ minBalanceSen: 4_660_000, minBalanceDate: "2026-12-05" });
-    expect(downside.withProposal.metrics).toMatchObject({ minBalanceSen: 1_775_000, firstBreachDate: "2026-12-24", peakFundingNeedSen: 1_225_000 });
+    expect(base.baseline.metrics).toMatchObject({ minBalanceSen: 9_136_000, minBalanceDate: "2026-12-05" });
+    expect(base.withProposal.metrics).toMatchObject({ minBalanceSen: 4_986_000, minBalanceDate: "2026-12-05" });
+    expect(downside.withProposal.metrics).toMatchObject({ minBalanceSen: 1_182_000, firstBreachDate: "2026-12-24", peakFundingNeedSen: 1_818_000 });
+  });
+
+  it("matches the Test 5 figures in docs/E2E-TESTING.md (pantry job, all payments confirmed)", () => {
+    const pantry: ProposalInput = {
+      requestId: "t5",
+      startDate: "2026-11-23",
+      events: [
+        { id: "T5-1", direction: "IN", amountSen: 1_200_000, offsetDays: 0, confidence: "CONFIRMED", label: "50% deposit", source: "MANUAL", confirmed: true },
+        { id: "T5-2", direction: "OUT", amountSen: 1_400_000, offsetDays: 7, confidence: "CONFIRMED", label: "Pantry cabinets", source: "MANUAL", confirmed: true },
+        { id: "T5-3", direction: "IN", amountSen: 1_200_000, offsetDays: 30, confidence: "CONFIRMED", label: "50% balance", source: "MANUAL", confirmed: true },
+      ],
+    };
+    const [asPlanned, thingsSlip, startLater] = scenarioPresets(C.customerDelayDays).map((s) => compareProposal(existing, recurring, pantry, settings, s).withProposal.metrics);
+    expect(asPlanned).toMatchObject({ minBalanceSen: 8_936_000, minBalanceDate: "2026-12-05", firstBreachDate: null });
+    expect(thingsSlip).toMatchObject({ minBalanceSen: 5_463_000, minBalanceDate: "2027-01-29", firstBreachDate: null });
+    expect(startLater).toMatchObject({ minBalanceSen: 9_136_000, minBalanceDate: "2026-12-05", firstBreachDate: null });
   });
 
   it("needs the owner's review for two reasons: downside breach and size", () => {

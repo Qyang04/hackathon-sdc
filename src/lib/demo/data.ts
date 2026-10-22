@@ -5,7 +5,7 @@ import type { ProposalEventInput } from "../engine/types";
 
 export const DEMO_COMPANY = {
   companyName: "Contoh Renovation Sdn Bhd (synthetic)",
-  openingCashSen: 18_000_000, // RM 180,000.00 in the bank at the start of the opening date
+  openingCashSen: 19_000_000, // RM 190,000.00 in the bank at the start of the opening date
   openingDate: "2026-11-02",
   reserveSen: 3_000_000, // RM 30,000.00: about three weeks of fixed costs
   approvalThresholdSen: 5_000_000, // RM 50,000.00: jobs above this always go to the owner
@@ -77,15 +77,20 @@ export const DEMO_PROJECTS: DemoProject[] = [
 export const DEMO_EVENTS: DemoEvent[] = [
   // Shoplot renovation
   { key: "shoplot-claim1", projectKey: "shoplot", direction: "IN", amountSen: 5_400_000, paidSen: 5_400_000, date: "2026-10-12", status: "PAID", confidence: "CONFIRMED", counterparty: "Kafe Contoh (synthetic)", label: "Progress claim 1 (30%)" },
-  { key: "shoplot-claim2", projectKey: "shoplot", direction: "IN", amountSen: 3_600_000, date: "2026-10-26", status: "COMMITTED", confidence: "ESTIMATED", counterparty: "Kafe Contoh (synthetic)", label: "Progress claim 2 (20%), overdue" },
-  { key: "shoplot-claim3", projectKey: "shoplot", direction: "IN", amountSen: 5_400_000, date: "2026-12-21", status: "PLANNED", confidence: "ESTIMATED", counterparty: "Kafe Contoh (synthetic)", label: "Final claim (30%)" },
-  { key: "shoplot-tiles", projectKey: "shoplot", direction: "OUT", amountSen: 1_800_000, date: "2026-11-09", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Jubin Contoh Trading (synthetic)", label: "Tiles PO balance" },
+  { key: "shoplot-claim2", projectKey: "shoplot", direction: "IN", amountSen: 3_420_000, date: "2026-10-26", status: "COMMITTED", confidence: "ESTIMATED", counterparty: "Kafe Contoh (synthetic)", label: "Progress claim 2 (20%), overdue, less 5% retention" },
+  { key: "shoplot-claim2-retention", projectKey: "shoplot", direction: "IN", amountSen: 180_000, date: "2027-01-10", status: "PLANNED", confidence: "CONFIRMED", counterparty: "Kafe Contoh (synthetic)", label: "Retention 5% of claim 2, after the defects liability period" },
+  { key: "shoplot-claim3", projectKey: "shoplot", direction: "IN", amountSen: 5_130_000, date: "2026-12-21", status: "PLANNED", confidence: "ESTIMATED", counterparty: "Kafe Contoh (synthetic)", label: "Final claim (30%), less 5% retention" },
+  { key: "shoplot-claim3-retention", projectKey: "shoplot", direction: "IN", amountSen: 270_000, date: "2027-02-20", status: "PLANNED", confidence: "CONFIRMED", counterparty: "Kafe Contoh (synthetic)", label: "Retention 5% of final claim, after defects liability period" },
+  { key: "shoplot-tiles-deposit", projectKey: "shoplot", direction: "OUT", amountSen: 720_000, date: "2026-11-02", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Jubin Contoh Trading (synthetic)", label: "Tiles PO deposit (40%)" },
+  { key: "shoplot-tiles", projectKey: "shoplot", direction: "OUT", amountSen: 1_080_000, date: "2026-11-09", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Jubin Contoh Trading (synthetic)", label: "Tiles PO balance (60%)" },
   { key: "shoplot-carpentry", projectKey: "shoplot", direction: "OUT", amountSen: 2_400_000, paidSen: 1_200_000, date: "2026-11-23", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Kayu Contoh Works (synthetic)", label: "Carpentry subcontractor, half paid" },
 
   // Clinic fit-out
   { key: "clinic-deposit", projectKey: "clinic", direction: "IN", amountSen: 4_800_000, paidSen: 4_800_000, date: "2026-10-28", status: "PAID", confidence: "CONFIRMED", counterparty: "Klinik Sihat Contoh (synthetic)", label: "Deposit (20%)" },
-  { key: "clinic-claim1", projectKey: "clinic", direction: "IN", amountSen: 7_200_000, date: "2026-12-07", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Klinik Sihat Contoh (synthetic)", label: "Progress claim 1 (30%), certified" },
-  { key: "clinic-claim2", projectKey: "clinic", direction: "IN", amountSen: 7_200_000, date: "2027-01-25", status: "PLANNED", confidence: "ESTIMATED", counterparty: "Klinik Sihat Contoh (synthetic)", label: "Progress claim 2 (30%)" },
+  { key: "clinic-claim1", projectKey: "clinic", direction: "IN", amountSen: 6_840_000, date: "2026-12-07", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Klinik Sihat Contoh (synthetic)", label: "Progress claim 1 (30%), certified, less 5% retention" },
+  { key: "clinic-claim1-retention", projectKey: "clinic", direction: "IN", amountSen: 360_000, date: "2027-02-28", status: "PLANNED", confidence: "CONFIRMED", counterparty: "Klinik Sihat Contoh (synthetic)", label: "Retention 5% of claim 1, after defects liability period" },
+  { key: "clinic-claim2", projectKey: "clinic", direction: "IN", amountSen: 6_840_000, date: "2027-01-25", status: "PLANNED", confidence: "ESTIMATED", counterparty: "Klinik Sihat Contoh (synthetic)", label: "Progress claim 2 (30%), less 5% retention" },
+  { key: "clinic-claim2-retention", projectKey: "clinic", direction: "IN", amountSen: 360_000, date: "2027-03-01", status: "PLANNED", confidence: "CONFIRMED", counterparty: "Klinik Sihat Contoh (synthetic)", label: "Retention 5% of claim 2, after defects liability period" },
   { key: "clinic-materials1", projectKey: "clinic", direction: "OUT", amountSen: 2_600_000, date: "2026-11-16", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Bahan Binaan Contoh (synthetic)", label: "Materials, first delivery" },
   { key: "clinic-mne", projectKey: "clinic", direction: "OUT", amountSen: 3_000_000, date: "2026-12-14", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Elektrik Contoh M&E (synthetic)", label: "M&E subcontractor, stage 1" },
   { key: "clinic-materials2", projectKey: "clinic", direction: "OUT", amountSen: 2_000_000, date: "2026-12-21", status: "PLANNED", confidence: "CONFIRMED", counterparty: "Bahan Binaan Contoh (synthetic)", label: "Materials, second delivery" },
@@ -94,7 +99,8 @@ export const DEMO_EVENTS: DemoEvent[] = [
   // Office repaint
   { key: "office-paint", projectKey: "office", direction: "OUT", amountSen: 900_000, date: "2026-11-06", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Cat Contoh Supplies (synthetic)", label: "Paint and labour" },
   { key: "office-glass", projectKey: "office", direction: "OUT", amountSen: 400_000, date: "2026-11-13", status: "CANCELLED", confidence: "CONFIRMED", counterparty: "Kaca Contoh (synthetic)", label: "Glass panels PO (cancelled, client changed design)" },
-  { key: "office-final", projectKey: "office", direction: "IN", amountSen: 3_000_000, date: "2026-12-28", status: "PLANNED", confidence: "CONFIRMED", counterparty: "Contoh Logistik Sdn Bhd (synthetic)", label: "Final claim (50%), 30 days after handover" },
+  { key: "office-final", projectKey: "office", direction: "IN", amountSen: 2_850_000, date: "2026-12-28", status: "PLANNED", confidence: "CONFIRMED", counterparty: "Contoh Logistik Sdn Bhd (synthetic)", label: "Final claim (50%), less 5% retention" },
+  { key: "office-final-retention", projectKey: "office", direction: "IN", amountSen: 150_000, date: "2027-02-28", status: "PLANNED", confidence: "CONFIRMED", counterparty: "Contoh Logistik Sdn Bhd (synthetic)", label: "Retention 5% of final claim, after defects liability period" },
 
   // Company
   { key: "sst", projectKey: null, direction: "OUT", amountSen: 650_000, date: "2026-11-30", status: "COMMITTED", confidence: "CONFIRMED", counterparty: "Royal Malaysian Customs (simulated)", label: "Service tax for Sep-Oct" },
@@ -107,6 +113,10 @@ export const DEMO_RECURRING: DemoRecurring[] = [
   { label: "Workshop and office rent", amountSen: 450_000, frequency: "MONTHLY", nextDate: "2026-12-01" },
   { label: "Lorry hire purchase", amountSen: 185_000, frequency: "MONTHLY", nextDate: "2026-11-05" },
   { label: "Site workers' weekly wages", amountSen: 220_000, frequency: "WEEKLY", nextDate: "2026-11-06" },
+  { label: "Utilities and internet", amountSen: 85_000, frequency: "MONTHLY", nextDate: "2026-11-03" },
+  { label: "Diesel and petrol", amountSen: 110_000, frequency: "MONTHLY", nextDate: "2026-11-10" },
+  { label: "LHDN CP204 tax instalment", amountSen: 150_000, frequency: "MONTHLY", nextDate: "2026-11-20" },
+  { label: "Insurance (CAR and vehicles)", amountSen: 64_000, frequency: "MONTHLY", nextDate: "2026-11-25" },
 ];
 
 // The job used in the demo. The quotation text is what staff paste in step 2; the events are what a person
