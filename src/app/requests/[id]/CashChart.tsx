@@ -13,12 +13,15 @@ export function CashChart({ baseline, withJob, reserveSen }: { baseline: WeeklyP
   const weeks = withJob.map((w) => w.weekStart);
   if (weeks.length < 2) return null;
   const all = [...baseline, ...withJob].map((w) => w.lowestDailySen).concat(reserveSen, 0);
-  const max = Math.max(...all);
-  const min = Math.min(...all);
+  // Round the axis to an even step (RM 1k, 2k, 5k, 10k, ...) so the labels are whole numbers
+  const tickStep = niceStep(Math.max(...all) - Math.min(...all));
+  const max = Math.ceil(Math.max(...all) / tickStep) * tickStep;
+  const min = Math.floor(Math.min(...all) / tickStep) * tickStep;
   const x = (i: number) => PAD.left + (i * (W - PAD.left - PAD.right)) / (weeks.length - 1);
   const y = (sen: number) => PAD.top + ((max - sen) * (H - PAD.top - PAD.bottom)) / (max - min || 1);
   const path = (pts: WeeklyPoint[]) => pts.map((p, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(p.lowestDailySen)}`).join(" ");
-  const ticks = [max, (max + min) / 2, min].map((t) => Math.round(t / 100) * 100);
+  const ticks: number[] = [];
+  for (let t = min; t <= max; t += tickStep) ticks.push(t);
   const last = weeks.length - 1;
   const step = (W - PAD.left - PAD.right) / (weeks.length - 1);
   const bottom = H - PAD.bottom;
@@ -27,9 +30,12 @@ export function CashChart({ baseline, withJob, reserveSen }: { baseline: WeeklyP
   const lowIdx = withJob.reduce((best, p, i) => (p.lowestDailySen < withJob[best].lowestDailySen ? i : best), 0);
   const low = withJob[lowIdx];
   const lowBelow = low.lowestDailySen < reserveSen;
-  // Label below the dot (the line usually comes down into the low point from above); above it when near the axis
-  const lowLabelY = y(low.lowestDailySen) + 22 <= bottom - 4 ? y(low.lowestDailySen) + 22 : y(low.lowestDailySen) - 12;
-  const lowAnchor = lowIdx === 0 ? "start" : lowIdx === last ? "end" : "middle";
+  // Label beside the dot: at a low point both neighbours are higher, so the side is clear.
+  // Nudged up when the dot sits on the buffer line, so the text never runs along it.
+  const onRight = lowIdx < last - 1;
+  const lowLabelX = x(lowIdx) + (onRight ? 10 : -10);
+  const lowLabelY = Math.abs(y(low.lowestDailySen) - y(reserveSen)) < 10 ? y(low.lowestDailySen) - 8 : y(low.lowestDailySen) + 4;
+  const lowAnchor = onRight ? "start" : "end";
 
   // End labels: keep at least 13px apart so "With job" / "Without" / "Buffer" never overlap
   const ends = [
@@ -65,7 +71,7 @@ export function CashChart({ baseline, withJob, reserveSen }: { baseline: WeeklyP
         <path d={path(baseline)} fill="none" stroke="var(--chart-baseline)" strokeWidth={2} strokeLinejoin="round" pathLength={1} className="draw-in" />
         <path d={path(withJob)} fill="none" stroke="#fff" strokeWidth={2.5} strokeLinejoin="round" pathLength={1} className="draw-in" />
         <circle cx={x(lowIdx)} cy={y(low.lowestDailySen)} r={5} fill={lowBelow ? "var(--danger-light)" : "var(--accent-light)"} stroke="var(--navy-deep)" strokeWidth={2} />
-        <text x={x(lowIdx)} y={lowLabelY} textAnchor={lowAnchor} fontSize={11} fontWeight={600} fill={lowBelow ? "var(--danger-light)" : "var(--accent-light)"}>
+        <text x={lowLabelX} y={lowLabelY} textAnchor={lowAnchor} fontSize={11} fontWeight={600} fill={lowBelow ? "var(--danger-light)" : "var(--accent-light)"}>
           {`lowest ${shortRM(low.lowestDailySen)}`}
         </text>
         {ends.map((l) => (
@@ -80,4 +86,12 @@ export function CashChart({ baseline, withJob, reserveSen }: { baseline: WeeklyP
       <figcaption className="small" style={{ color: "var(--on-navy-muted)" }}>Lowest balance in each week (weeks start Monday). Hover a week for the figures.</figcaption>
     </figure>
   );
+}
+
+/** Smallest of 1/2/5 x 10^n ringgit (in sen) that splits the range into at most 4 steps. */
+function niceStep(rangeSen: number): number {
+  const target = Math.max(rangeSen, 100_000) / 4;
+  const pow = 10 ** Math.floor(Math.log10(target));
+  for (const m of [1, 2, 5, 10]) if (m * pow >= target) return m * pow;
+  return 10 * pow;
 }
