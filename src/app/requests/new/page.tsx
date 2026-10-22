@@ -29,7 +29,7 @@ interface Job {
   contractValueSen: number;
 }
 
-const STEPS = ["1. Describe the job", "2. Payment dates", "3. Run the check"];
+const STEPS = ["Describe the job", "Payment dates", "Run the check"];
 
 export default function NewRequestPage() {
   const [step, setStep] = useState(0);
@@ -43,10 +43,18 @@ export default function NewRequestPage() {
 
   return (
     <>
-      <h1>New commitment check</h1>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">Before you accept a job</div>
+          <h1>New commitment check</h1>
+        </div>
+      </div>
       <div className="steps">
         {STEPS.map((s, i) => (
-          <span key={s} className={i === step ? "current" : ""}>{s}</span>
+          <span key={s} className={i === step ? "current" : i < step ? "done" : ""} aria-current={i === step ? "step" : undefined}>
+            <span className="n">{i < step ? "✓" : i + 1}</span>
+            {s}
+          </span>
         ))}
       </div>
       {step === 0 && (
@@ -104,7 +112,8 @@ function JobStep({ onCreated }: { onCreated: (job: Job) => void }) {
   }
 
   return (
-    <form className="card" onSubmit={submit}>
+    <form className="card" onSubmit={submit} style={{ maxWidth: 760 }}>
+      <h2>What is the job?</h2>
       <div className="row">
         <div className="field">
           <label htmlFor="title">Job name</label>
@@ -204,7 +213,10 @@ function PaymentsStep({
   return (
     <>
       <div className="card">
-        <h2>Paste the quotation or purchase order</h2>
+        <div className="card-head">
+          <h2>Paste the quotation or purchase order</h2>
+          <span className="ai-label" style={{ margin: 0 }}>Suggestions only</span>
+        </div>
         <p className="muted small">
           The assistant suggests payment dates and amounts from the text. Nothing is used until you confirm it.
         </p>
@@ -282,7 +294,7 @@ function ManualEventForm({ job, onAdded }: { job: Job; onAdded: () => Promise<vo
   }
 
   return (
-    <form onSubmit={submit} style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+    <form onSubmit={submit} className="subform">
       <h2>Add a payment by hand</h2>
       <div className="row">
         <div className="field">
@@ -311,7 +323,7 @@ function ManualEventForm({ job, onAdded }: { job: Job; onAdded: () => Promise<vo
           <input id="m-amount" name="amount" inputMode="decimal" required />
         </div>
         <div className="field">
-          <label>
+          <label className="check">
             <input type="checkbox" name="estimated" /> Date is only an estimate
           </label>
         </div>
@@ -342,14 +354,14 @@ function EventTable({
       <tbody>
         {events.map((e) => (
           <tr key={e.id}>
-            <td className="small">
+            <td className="date">
               {e.offsetDays === null ? "Unknown" : addDays(job.startDate, e.offsetDays)}
-              <br />
-              <span className="muted">day {e.offsetDays ?? "?"} after start</span>
+              <div className="muted small">day {e.offsetDays ?? "?"} after start</div>
             </td>
             <td>
               {e.label}
-              {e.sourceRef && <div className="muted small">“{e.sourceRef}”</div>}
+              {e.source === "AI_EXTRACTED" && <> <span className="pill info">AI suggestion</span></>}
+              {e.sourceRef && <div className="ai-text small">“{e.sourceRef}”</div>}
             </td>
             <td className="num">{e.direction === "IN" ? formatRM(e.amountSen) : ""}</td>
             <td className="num">{e.direction === "OUT" ? formatRM(e.amountSen) : ""}</td>
@@ -357,14 +369,14 @@ function EventTable({
               {e.confirmed ? (
                 <span className="pill ok">confirmed</span>
               ) : onConfirm ? (
-                <button className="secondary" onClick={() => onConfirm(e.id)}>Confirm</button>
+                <button className="small" onClick={() => onConfirm(e.id)}>Confirm</button>
               ) : (
                 <span className="pill warn">not confirmed</span>
               )}
               {onRemove && (
                 <>
                   {" "}
-                  <button className="secondary" onClick={() => onRemove(e.id)} aria-label={`Remove ${e.label}`}>Remove</button>
+                  <button className="secondary small" onClick={() => onRemove(e.id)} aria-label={`Remove ${e.label}`}>Remove</button>
                 </>
               )}
             </td>
@@ -396,13 +408,15 @@ function RunStep({ job, events, onBack }: { job: Job; events: ProposalEvent[]; o
   }
 
   return (
-    <div className="card">
+    <div className="card" style={{ maxWidth: 760 }}>
       <h2>Ready to check {job.title}</h2>
-      <ul>
-        <li>Client: {job.client}, starting {job.startDate}</li>
-        <li>Contract value {formatRM(job.contractValueSen)}; payments listed add up to {formatRM(receipts)}</li>
-        <li>{events.length} payment(s) entered</li>
-      </ul>
+      <div className="stats" style={{ marginBottom: 12 }}>
+        <div className="stat"><div className="label">Client</div><div className="value" style={{ fontFamily: "inherit" }}>{job.client}</div></div>
+        <div className="stat"><div className="label">Starts</div><div className="value">{job.startDate}</div></div>
+        <div className="stat"><div className="label">Contract value</div><div className="value">{formatRM(job.contractValueSen)}</div></div>
+        <div className="stat"><div className="label">Client payments listed</div><div className="value">{formatRM(receipts)}</div></div>
+      </div>
+      <p className="muted small">{events.length} payment(s) entered. The check compares your cash with and without this job over the next 13 weeks.</p>
       {unconfirmed > 0 && (
         <p className="error">{unconfirmed} suggested payment(s) are not confirmed yet. The check will not use them until you confirm.</p>
       )}
