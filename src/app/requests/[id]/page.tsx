@@ -13,6 +13,7 @@ import { prettyDate, prettyTime } from "../../format";
 import { ResultDetails, ResultHero } from "./ResultView";
 import { RunCheckButton } from "./RunCheckButton";
 import { DecisionPanel } from "./DecisionPanel";
+import { EditPayments } from "./EditPayments";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +106,25 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
             {unconfirmed.length > 0 && (
               <p className="error">{unconfirmed.length} suggested payment(s) are not confirmed and will not be used in the check.</p>
             )}
-            {request.events.length === 0 ? (
+            {canRun ? (
+              <>
+                <p className="muted small">You can still change the payments. Run the check again afterwards.</p>
+                <EditPayments
+                  job={{ id: request.id, title: request.title, client: request.client, startDate: request.startDate, contractValueSen: request.contractValueSen }}
+                  events={request.events.map((e) => ({
+                    id: e.id,
+                    direction: e.direction as "IN" | "OUT",
+                    amountSen: e.amountSen,
+                    offsetDays: e.offsetDays,
+                    confidence: e.confidence,
+                    label: e.label,
+                    source: e.source,
+                    sourceRef: e.sourceRef,
+                    confirmed: e.confirmed,
+                  }))}
+                />
+              </>
+            ) : request.events.length === 0 ? (
               <p className="muted">No payments entered.</p>
             ) : (
               <table>
