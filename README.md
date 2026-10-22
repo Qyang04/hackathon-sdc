@@ -8,7 +8,8 @@ SDC Hackathon 2026 · Domain 2: Orbyte Smart SME Challenge · SDG 8 (targets 8.2
 
 ## Status
 
-Phases 1 and 2 are done: the whole journey works locally. See **Progress** at the top of `docs/PLAN.md` for what is done and not done per workstream, and `docs/DEMO.md` for the demo script and expected figures.
+Phases 1 and 2 are done: the whole journey works locally. See **Progress** at the top of `docs/PLAN.md` for what is done and not done per workstream, `docs/DEMO.md` for the demo script and expected figures, and `docs/E2E-TESTING.md`
+for a step-by-step test of the whole app.
 
 ## Quick start (local)
 
