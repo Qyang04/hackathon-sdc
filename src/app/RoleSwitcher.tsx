@@ -11,12 +11,9 @@ export function RoleSwitcher({ current }: { current: Role }) {
     router.refresh();
   }
   return (
-    <label style={{ marginLeft: "auto" }}>
-      Acting as{" "}
-      <select value={current} onChange={(e) => choose(e.target.value as Role)}>
-        <option value="OWNER">Owner</option>
-        <option value="STAFF">Staff</option>
-      </select>
-    </label>
+    <div className="segmented" role="group" aria-label="Switch simulated role">
+      <button type="button" aria-pressed={current === "OWNER"} onClick={() => choose("OWNER")}>Owner</button>
+      <button type="button" aria-pressed={current === "STAFF"} onClick={() => choose("STAFF")}>Staff</button>
+    </div>
   );
 }
