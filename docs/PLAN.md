@@ -11,11 +11,23 @@ Workstreams (one accountable owner each; names in `docs/DECISIONS.md`):
 
 Each phase ends with an exit gate. Do not start the next phase's features until the gate passes; fix instead.
 
+## Progress (updated Thu 22 Oct 2026)
+
+Where we are: **Phase 1 and Phase 2 exit gates passed.** Phase 3 is next (Replit deploy rehearsal is the priority).
+Keep this section current when you merge something: move items from "Not done" to "Done".
+
+| Area | Done | Not done |
+| --- | --- | --- |
+| A — Engine & rules | Forecast engine (`expandRecurring`, `normaliseExisting`, `normaliseProposal`, `runForecast`, `compareProposal`); validation; policy; hand-calculated cases 1–4 in `docs/test-cases.md`; demo company (`src/lib/demo/data.ts`) with a test that guards the demo story; 55 tests passing | Open questions Q2 (receipt delayed past the horizon) and Q4 (what `excludeUnconfirmedReceipts` ever drops) in `docs/test-cases.md` |
+| B — Backend & AI | Every API route in `docs/CONTRACTS.md` (requests, extract, forecast, decision with simulated e-sign, owner-only reset); saving and loading checks (`src/lib/runs.ts`); simulated roles and activity log | **`generateBrief`** (`src/lib/ai/brief.ts`, the AI summary; the page shows a fallback until then); **LLM provider + key (D5)**, so extraction also works; **Replit deploy rehearsal** and database choice (D4) |
+| C — Frontend & UX | Navy/indigo redesign of every page; overview with lowest cash over 13 weeks; three-step wizard; result page (headline sentence, waterline chart, scenario tabs, rules, contributors, comparison table); owner decision panel; activity timeline; reset button (owner only); works at phone width | Usability check with a teammate who did not build it (Phase 3 gate); decide whether to keep `/preview/result` |
+| D — Submission | Demo script with expected figures (`docs/DEMO.md`) | Owners and D1–D6 in `docs/DECISIONS.md`; SME conversations (D6); PRD; Technical & Tools Declaration (must list Claude Code and every other AI tool used); slides; video; everything in `submission/CHECKLIST.md` |
+
 ## Phase 0 — Set up (Wed 21 Oct, morning)
 
 Goal: everyone can run the same app locally and knows what they own.
 
-- [ ] Leader: create the GitHub repo (private for now), push this scaffold as the first commit, invite members.
+- [x] Leader: create the GitHub repo (private for now), push this scaffold as the first commit, invite members.
 - [ ] Everyone: clone, `npm install`, `npm run db:reset`, `npm run dev`, `npm test` all work.
 - [ ] Fill names and decisions D1–D6 in `docs/DECISIONS.md`.
 - [ ] D: message 2–3 SME owners you know for a 10-minute call (real-world validation; report honestly).
@@ -31,7 +43,9 @@ Goal: the numbers are right before any screen depends on them.
 - **C:** layout and overview page with real `/api/portfolio` data; static mock of the result page using a hand-written `ComparisonResult` object (types from `src/lib/engine/types.ts`).
 - **D:** PRD sections 1–2 draft (problem, solution) within word limits.
 
-Exit gate: engine tests pass on hand-calculated cases; a request can be created and read back through the API.
+Exit gate: engine tests pass on hand-calculated cases; a request can be created and read back through the API. **Passed 21 Oct.**
+
+Status: A done (incl. demo company). B done except the LLM provider (D5). C done (the overview reads the database directly instead of `/api/portfolio`). D not started.
 
 ## Phase 2 — One journey end to end (Thu 22 Oct)
 
@@ -42,7 +56,9 @@ Goal: trigger → data → decision → approval → outcome works, even roughly
 - **C:** three-step wizard wired to the API (paste quotation → confirm dates → run check); result page wired; owner-only decision buttons; activity page.
 - **D:** PRD sections 3–4 (architecture, SDG 8.3/8.2, baseline, KPI with cited sources); Technical & Tools Declaration draft.
 
-Exit gate: the full journey runs locally from a fresh `npm run db:reset` without touching the database by hand.
+Exit gate: the full journey runs locally from a fresh `npm run db:reset` without touching the database by hand. **Passed 22 Oct** (create, payments, check, staff blocked, owner approves, simulated e-sign, activity log).
+
+Status: A, B, C done, except the AI brief (shows "not available" until `generateBrief` is written). D not started.
 
 ## Phase 3 — Accuracy, ease of learning, deploy rehearsal (Fri 23 Oct)
 
@@ -54,6 +70,8 @@ Goal: a first-time user understands it; the deploy is proven.
 - **D:** finish PRD (incl. PDPA paragraph, IP declaration 6.1 mentioning the earlier UMHackathon project honestly); slides; video script under 6.5 minutes.
 
 Exit gate: a teammate who did not build the UI completes the demo without help, on the Replit URL.
+
+Status (22 Oct): C items done early (plain-language sentence, scenario comparison, contributors, unconfirmed inputs, AI-failure fallback). A edge-case tests done (reserve equality, overdue, horizon extension). `POST /api/reset` done. Not done: Replit rehearsal (B), D items.
 
 ## Phase 4 — Freeze and submit (Sat 24 Oct)
 

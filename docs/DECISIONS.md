@@ -15,8 +15,8 @@ Record each team decision with date and who decided. Design decisions stay with 
 
 | ID | Question | Options | Decision | Date |
 | --- | --- | --- | --- | --- |
-| D1 | Target SME segment for demo data and pitch | Renovation contractor / event agency / IT services | | |
-| D2 | Outcome action after approval | E-sign acceptance (scaffold default) / project creation / deposit invoice request | | |
+| D1 | Target SME segment for demo data and pitch | Renovation contractor / event agency / IT services | Built as renovation / fit-out contractor (demo data); team to confirm | |
+| D2 | Outcome action after approval | E-sign acceptance (scaffold default) / project creation / deposit invoice request | Built as e-sign acceptance (simulated); team to confirm | |
 | D3 | KPI and baseline | e.g. minutes per commitment review; % of reviews with complete evidence | | |
 | D4 | Database on Replit | Replit PostgreSQL (change Prisma provider) / SQLite on a Reserved VM | | |
 | D5 | LLM provider and model | any OpenAI-compatible API | | |
@@ -34,3 +34,5 @@ Record each team decision with date and who decided. Design decisions stay with 
 | 2026-10-21 | Downside: an overdue estimated receipt moves to the opening date first, then gets the customer delay | It is already late; assuming it arrives on day 0 would overstate cash |
 | 2026-10-21 | Downside cost increase applies to project and one-off OUT events, not to recurring costs (payroll, rent) | Recurring costs are fixed amounts |
 | 2026-10-22 | Demo company lives in `src/lib/demo/data.ts`, shared by the seed, the reset and a test that checks the demo story (base above buffer, downside below) | One source of truth; the video cannot silently break when someone edits the seed |
+| 2026-10-22 | UI theme: navy with an electric indigo accent; warning colours (red, amber, green) kept separate from the brand colour | Chosen from mockups; distinctive, and a warning never looks like decoration |
+| 2026-10-22 | Demo reset is owner-only and asks for confirmation on the page | It deletes every check; the server enforces the role, not just the button |

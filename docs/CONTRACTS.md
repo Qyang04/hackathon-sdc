@@ -79,6 +79,6 @@ DRAFT --(check run)--> CHECKED --(owner APPROVED)--> APPROVED --(e-sign sent)-->
 | `GET /api/requests/:id` | Request, events, latest run, decisions, activity | Done |
 | `PATCH /api/requests/:id` | Edit draft, confirm AI-extracted events, add/remove manual events | Done |
 | `POST /api/extract` | AI milestones from pasted text | Done |
-| `POST /api/requests/:id/forecast` | Validate, three scenarios, policy, brief, save run | TODO(B) |
-| `POST /api/requests/:id/decision` | Owner decision + outcome action | TODO(B) |
-| `POST /api/reset` | Re-seed demo data | TODO(B) |
+| `POST /api/requests/:id/forecast` | Validate, three scenarios, policy, brief, save run | Done (brief is null until `generateBrief` exists) |
+| `POST /api/requests/:id/decision` | Owner decision + outcome action | Done |
+| `POST /api/reset` | Re-seed demo data (owner only; 403 for staff) | Done |

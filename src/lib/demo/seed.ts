@@ -3,7 +3,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { DEMO_COMPANY, DEMO_EVENTS, DEMO_PROJECTS, DEMO_RECURRING } from "./data";
 
-export async function seedDemo(prisma: PrismaClient): Promise<void> {
+export async function seedDemo(prisma: PrismaClient, actor = "system"): Promise<void> {
   await prisma.$transaction(async (tx) => {
     // Children before parents
     await tx.activityLog.deleteMany();
@@ -35,6 +35,6 @@ export async function seedDemo(prisma: PrismaClient): Promise<void> {
 
     await tx.recurringCost.createMany({ data: DEMO_RECURRING.map((r) => ({ ...r, endDate: r.endDate ?? null })) });
 
-    await tx.activityLog.create({ data: { actor: "system", action: "SEED_RESET", detail: "Demo data reset (synthetic company)" } });
+    await tx.activityLog.create({ data: { actor, action: "SEED_RESET", detail: "Demo data reset (synthetic company)" } });
   });
 }
