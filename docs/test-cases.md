@@ -14,11 +14,11 @@ How to use this file:
 ## Open questions (decide with the team before calculating, then record in DECISIONS.md)
 
 - Q1. Does the downside `costIncreasePct` apply to recurring costs (payroll, rent), or only to project OUT events? **Decided: only project and one-off OUT events.** Payroll and rent are fixed amounts.
-- Q2. If the downside receipt delay pushes an existing IN event past the horizon end, is it dropped with `EVENT_BEYOND_HORIZON`, or does the horizon extend?
+- Q2. If the downside receipt delay pushes an existing IN event past the horizon end, is it dropped with `EVENT_BEYOND_HORIZON`, or does the horizon extend? **Decided: dropped with `EVENT_BEYOND_HORIZON`.** The horizon extends only for proposal events (CONTRACTS rule 5). Extending it for existing events would give the BASE and DOWNSIDE runs different date ranges, so `minBalanceDeltaSen` and the weekly tables would compare non-overlapping windows. Proved by the Q2 test in `engine.test.ts` (compareProposal: E6 delayed past the horizon).
 - Q3. Monthly recurring on the 31st: after February (28th), does March go back to the 31st? **Decided: yes.** Every month uses the original day, capped at the month's last day.
 - Q5. A recurring cost whose `nextDate` is before `openingDate`: ignore the missed occurrences, or count them? **Decided: count each missed occurrence on `openingDate`, flagged `overdue`** (same as CONTRACTS rule 2 for one-off events; ignoring them would overstate cash).
 - Q6. Downside on an overdue estimated receipt: delay from its original date, or from day 0? **Decided: from day 0** (move overdue to day 0 first, then add the delay). It is already late, so assuming it arrives today would be optimistic.
-- Q4. `excludeUnconfirmedReceipts`: validation already blocks unconfirmed AI events, so what does this rule ever drop?
+- Q4. `excludeUnconfirmedReceipts`: validation already blocks unconfirmed AI events, so what does this rule ever drop? **Decided: keep it as a second-line safety net.** Validation (`UNCONFIRMED_AI_FIELD`) blocks unconfirmed AI_EXTRACTED proposal events before the engine runs, and manual events are always created confirmed — so in the live API flow the rule drops nothing. It still guards existing (baseline) events fed by the simulated Orbyte accounting adapter if those ever arrive with `confirmed: false`, and it is covered by the `UNCONFIRMED_EXCLUDED` tests in `engine.test.ts` for both existing and proposal events.
 
 ## Case 1 — baseline: statuses, overdue, partial payment, recurring, daily vs weekly
 
@@ -141,5 +141,5 @@ R3 stops because 2027-04-02 is after the horizon end. R4's 2026-12-28 occurrence
 
 Not calculated by hand; too long for a table. The demo company in `src/lib/demo/data.ts` is checked by
 `src/lib/demo/demo.test.ts`, which pins the figures the demo relies on (see `docs/DEMO.md`): without the job the lowest
-cash stays above the buffer in every scenario; with the restaurant job it is RM 46,600 as planned (above) and
-RM 17,750 if things slip (below from 2026-12-24).
+cash stays above the buffer in every scenario; with the restaurant job it is RM 49,860 as planned (above) and
+RM 11,820 if things slip (below from 2026-12-24).

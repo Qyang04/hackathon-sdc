@@ -293,4 +293,76 @@ describe("compareProposal", () => {
     expect(r.baseline.warnings.map((w) => w.code)).toContain("OVERDUE_MOVED_TO_DAY0");
     expect(r.withProposal.warnings.map((w) => w.code)).toContain("OVERDUE_MOVED_TO_DAY0");
   });
+
+  it("Q2: a downside-delayed existing receipt past the horizon is dropped with a warning; the horizon extends only for proposal events", () => {
+    // P1 is an OUT on day 2, so the horizon stays 2026-11-15 (openingDate + minHorizonDays - 1).
+    const proposal: ProposalInput = { requestId: "Q2", startDate: "2026-11-03", events: [{ id: "P1", direction: "OUT", amountSen: 1_000_000, offsetDays: 0, confidence: "CONFIRMED", label: "P1", source: "MANUAL", confirmed: true }] };
+    const r = compareProposal(case1Events, [], proposal, settings, DOWNSIDE);
+    // E6 (ESTIMATED IN on 9 Nov) is delayed 14 days to 23 Nov, past the horizon end; E8 (20 Nov) was already past it.
+    for (const run of [r.baseline, r.withProposal]) {
+      expect(run.warnings.map((w) => [w.code, w.sourceId])).toContainEqual(["EVENT_BEYOND_HORIZON", "E6"]);
+      expect(run.events.map((e) => e.sourceId)).not.toContain("E6");
+      expect(run.horizonEnd).toBe("2026-11-15");
+    }
+  });
+});
+
+// Master plan §12.2: key figures trace to a source record (test 5); the engine is a pure
+// function so a recalculation from the same stored inputs reproduces the same figures.
+describe("traceability and purity", () => {
+  const settings: ForecastSettings = { openingCashSen: 3_000_000, openingDate: "2026-11-02", reserveSen: 2_000_000, minHorizonDays: 14 };
+  const payroll: RecurringCostInput = { id: "R1", label: "Payroll", amountSen: 1_200_000, frequency: "MONTHLY", nextDate: "2026-11-13", endDate: null };
+  const result = () => compareProposal(case1Events, [payroll], case3Proposal, settings, DOWNSIDE);
+
+  it("every daily movement equals the sum of labelled source events on that date", () => {
+    for (const run of [result().baseline, result().withProposal]) {
+      expect(run.events.every((e) => e.sourceId && e.label)).toBe(true);
+      const byDate = new Map<string, { inSen: number; outSen: number }>();
+      for (const e of run.events) {
+        const d = byDate.get(e.date) ?? { inSen: 0, outSen: 0 };
+        if (e.signedSen > 0) d.inSen += e.signedSen;
+        else d.outSen += -e.signedSen;
+        byDate.set(e.date, d);
+      }
+      for (const day of run.days.filter((d) => d.inSen || d.outSen)) {
+        expect(byDate.get(day.date)).toEqual({ inSen: day.inSen, outSen: day.outSen });
+      }
+    }
+  });
+
+  it("weekly roll-ups equal the sum of their days; every week traces to a Monday", () => {
+    const run = result().withProposal;
+    for (const w of run.weeks) {
+      const days = run.days.filter((d) => d.date >= w.weekStart && d.date < addDays(w.weekStart, 7));
+      expect(days.length).toBeGreaterThan(0); // the last week may be partial (horizon can end mid-week)
+      expect(days.length).toBeLessThanOrEqual(7);
+      expect(new Date(w.weekStart + "T00:00:00Z").getUTCDay()).toBe(1); // weeks start on Monday
+      expect(days.reduce((s, d) => s + d.inSen, 0)).toBe(w.inSen);
+      expect(days.reduce((s, d) => s + d.outSen, 0)).toBe(w.outSen);
+      expect(w.closingSen).toBe(days[days.length - 1].closingSen); // closing = last day of the week
+      expect(w.lowestDailySen).toBe(Math.min(...days.map((d) => d.closingSen)));
+    }
+  });
+
+  it("main contributors reference events that exist in the with-proposal run", () => {
+    const r = result();
+    const ids = r.withProposal.events.map((e) => e.sourceId);
+    for (const c of r.mainContributors) {
+      expect(ids).toContain(c.sourceId);
+      const e = r.withProposal.events.find((x) => x.sourceId === c.sourceId);
+      expect(e).toMatchObject({ label: c.label, date: c.date, signedSen: c.signedSen });
+    }
+  });
+
+  it("compareProposal does not mutate its inputs (purity)", () => {
+    const existing = structuredClone(case1Events);
+    const recurring = structuredClone([payroll]);
+    const proposal = structuredClone(case3Proposal);
+    const conf = structuredClone(settings);
+    compareProposal(existing, recurring, proposal, conf, DOWNSIDE);
+    expect(existing).toEqual(case1Events);
+    expect(recurring).toEqual([payroll]);
+    expect(proposal).toEqual(case3Proposal);
+    expect(conf).toEqual(settings);
+  });
 });
