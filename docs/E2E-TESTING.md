@@ -175,7 +175,16 @@ Still as **Staff** on the result page:
 - [ ] No chart and no figures (the app never guesses)
 - [ ] Status **Needs info**; there are no decision buttons, even as Owner
 
-> Known gap: you can't add payments to an existing job from its page yet. To fix it, start a new check.
+**Now fix it** (still as Staff, on the same page):
+
+3. Scroll to **Payments for this job**. Under **Add a payment by hand**, add:
+   - Client pays you · `Full payment` · 30 Nov 2026 · `5000`
+   - You pay a supplier · `Materials` · 2 Dec 2026 · `3000`
+4. Click **Run the check again** (top right).
+
+- [ ] Status changes to **Awaiting owner**, with a green **NO RULE TRIGGERED** banner and a chart
+- [ ] The payment form is gone (payments are locked once the check has run)
+- [ ] Activity shows: payments added, status back to draft, check run
 
 ---
 
