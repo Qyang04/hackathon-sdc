@@ -136,3 +136,10 @@ Opening 2027-01-01, horizon end 2027-03-31.
 
 Why: R1 shows Feb capped at the 28th and March back on the 31st (Q3). R2 stops because 2027-03-15 is after `endDate`.
 R3 stops because 2027-04-02 is after the horizon end. R4's 2026-12-28 occurrence is before the opening date, so it moves to day 0 (Q5).
+
+## Demo company (full 13-week check)
+
+Not calculated by hand; too long for a table. The demo company in `src/lib/demo/data.ts` is checked by
+`src/lib/demo/demo.test.ts`, which pins the figures the demo relies on (see `docs/DEMO.md`): without the job the lowest
+cash stays above the buffer in every scenario; with the restaurant job it is RM 46,600 as planned (above) and
+RM 17,750 if things slip (below from 2026-12-24).

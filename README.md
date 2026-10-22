@@ -6,6 +6,10 @@ SDC Hackathon 2026 · Domain 2: Orbyte Smart SME Challenge · SDG 8 (targets 8.2
 
 > All data in this project is synthetic. Orbyte connections are simulated. The app supports a person's decision; it does not give financial advice and never approves or pays anything by itself.
 
+## Status
+
+Phases 1 and 2 are done: the whole journey works locally. See **Progress** at the top of `docs/PLAN.md` for what is done and not done per workstream, and `docs/DEMO.md` for the demo script and expected figures.
+
 ## Quick start (local)
 
 Requirements: Node.js 20 or 22, npm, Git.
@@ -15,8 +19,10 @@ npm install            # also runs prisma generate
 cp .env.example .env   # Windows PowerShell: Copy-Item .env.example .env
 npm run db:reset       # create the SQLite database and load demo data
 npm run dev            # http://localhost:3000
-npm test               # engine, policy and validation tests
+npm test               # engine, policy, validation and demo-story tests
 ```
+
+To start the demo again from clean data, the owner can press **Reset demo data** on the overview (or run `npm run db:seed`).
 
 AI is optional while developing: leave `LLM_API_KEY` empty and the app runs without it (payment dates are then entered manually). Figures never depend on AI.
 
@@ -38,16 +44,18 @@ AI is used in two places only: reading payment milestones out of quotation/PO te
 | `src/lib/engine/` | Deterministic cash forecast: types (contracts), money/date helpers, forecast, scenarios | A |
 | `src/lib/policy/` | Policy rules: PASS / NEEDS_REVIEW / BLOCKED | A |
 | `src/lib/validation/` | Request validation rules | A |
-| `prisma/seed.ts`, `docs/test-cases.md` | Demo company data and hand-calculated expected results | A |
+| `src/lib/demo/` | Demo company data (one source for seed, reset and the demo-story test) | A |
+| `prisma/seed.ts`, `docs/test-cases.md`, `docs/DEMO.md` | Seed script, hand-calculated expected results, demo script | A |
 | `prisma/schema.prisma` | Database model | B |
 | `src/app/api/` | API routes (contract in `docs/CONTRACTS.md`) | B |
+| `src/lib/runs.ts` | Saving and loading a check (one row per scenario) | B |
 | `src/lib/ai/` | LLM client, output schemas, extraction, brief | B |
 | `src/lib/adapters/` | Simulated Orbyte connections | B |
 | `src/lib/session.ts`, `src/lib/audit.ts` | Simulated roles, activity log | B |
 | `src/app/` pages | Overview, wizard, result + decision, activity | C |
 | `docs/`, `submission/` | PRD, declaration, slides, video, checklist | D |
 
-Search for `TODO(A)`, `TODO(B)`, `TODO(C)` to find your starting points.
+Search for `TODO(A)`, `TODO(B)`, `TODO(C)` to find what is left in the code (only `generateBrief` remains).
 
 ## Working agreement
 
