@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { simulatedAccounting } from "@/lib/adapters/orbyte";
 import { addDays, expandRecurring, formatRM, normaliseExisting, runForecast, scenarioPresets } from "@/lib/engine";
 import { StatusPill } from "./StatusPill";
+import { ResetDemoButton } from "./ResetDemoButton";
+import { canDecide, getSession } from "@/lib/session";
 import { prettyDate, shortRM } from "./format";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +13,7 @@ export const dynamic = "force-dynamic";
 const HORIZON_DAYS = 91; // 13 weeks, same as the check
 
 export default async function OverviewPage() {
-  const [settings, projects, recurring, requests, upcoming] = await Promise.all([
+  const [settings, projects, recurring, requests, upcoming, session] = await Promise.all([
     prisma.companySettings.findUnique({ where: { id: 1 } }),
     prisma.project.findMany({ where: { status: "ACTIVE" }, orderBy: { startDate: "asc" } }),
     prisma.recurringCost.findMany({ orderBy: { nextDate: "asc" } }),
@@ -21,6 +23,7 @@ export default async function OverviewPage() {
       orderBy: { date: "asc" },
       include: { project: { select: { name: true } } },
     }),
+    getSession(),
   ]);
 
   if (!settings) {
@@ -52,7 +55,10 @@ export default async function OverviewPage() {
           <div className="eyebrow">Overview · simulated demo data</div>
           <h1>{settings.companyName}</h1>
         </div>
-        <Link href="/requests/new" className="button">Start a new check</Link>
+        <div className="actions" style={{ marginTop: 0, alignItems: "center" }}>
+          {canDecide(session) && <ResetDemoButton />}
+          <Link href="/requests/new" className="button">Start a new check</Link>
+        </div>
       </div>
 
       <section className="hero">

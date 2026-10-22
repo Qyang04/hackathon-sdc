@@ -198,6 +198,9 @@ button:active:not(:disabled) { transform: translateY(1px); }
 button.secondary, .button.secondary { background: var(--surface); color: var(--text); border-color: var(--line); }
 button.secondary:hover:not(:disabled), .button.secondary:hover { background: var(--tint); border-color: #c5c9e4; }
 button.small { font-size: 12px; padding: 5px 10px; }
+button.danger { background: var(--danger); border-color: var(--danger); }
+button.danger:hover:not(:disabled) { background: #8f1c13; border-color: #8f1c13; }
+.confirm { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--danger-soft); padding: 6px 8px 6px 12px; border-radius: 10px; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .actions.stack { flex-direction: column; }
