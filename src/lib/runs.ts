@@ -53,7 +53,7 @@ export async function saveCheck(
       },
     });
     return run.id;
-  });
+  }, { maxWait: 10_000, timeout: 20_000 }); // above Prisma's 2 s / 5 s defaults: Replit Postgres may be waking from sleep
 }
 
 /** The latest check for a request, or null if it has never run. */

@@ -36,5 +36,5 @@ export async function seedDemo(prisma: PrismaClient, actor = "system"): Promise<
     await tx.recurringCost.createMany({ data: DEMO_RECURRING.map((r) => ({ ...r, endDate: r.endDate ?? null })) });
 
     await tx.activityLog.create({ data: { actor, action: "SEED_RESET", detail: "Demo data reset (synthetic company)" } });
-  });
+  }, { maxWait: 10_000, timeout: 20_000 }); // above Prisma's 2 s / 5 s defaults: Replit Postgres may be waking from sleep
 }

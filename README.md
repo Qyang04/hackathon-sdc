@@ -13,15 +13,18 @@ for a step-by-step test of the whole app.
 
 ## Quick start (local)
 
-Requirements: Node.js 20 or 22, npm, Git.
+Requirements: Node.js 20 or 22, npm, Git, Docker Desktop (for the local PostgreSQL).
 
 ```bash
 npm install            # also runs prisma generate
 cp .env.example .env   # Windows PowerShell: Copy-Item .env.example .env
-npm run db:reset       # create the SQLite database and load demo data
+docker compose up -d   # local PostgreSQL on port 5433 (data kept in a Docker volume)
+npm run db:reset       # create the tables and load demo data
 npm run dev            # http://localhost:3000
-npm test               # engine, policy, validation and demo-story tests
+npm test               # engine, policy, validation and demo-story tests (no database needed)
 ```
+
+Back up any of our databases with `npm run db:backup` and load a backup with `npm run db:restore -- <file>`. Deploying to Replit and the fallback if Replit credit runs out: `docs/DEPLOY.md`.
 
 To start the demo again from clean data, the owner can press **Reset demo data** on the overview (or run `npm run db:seed`).
 
@@ -69,7 +72,7 @@ Search for `TODO(A)`, `TODO(B)`, `TODO(C)` to find what is left in the code (onl
 
 ## Deployment (Replit)
 
-Replit is compulsory for the submission. Plan: build locally, rehearse a Replit deploy on Day 3 morning, final deploy on Day 4. See `docs/PLAN.md` phase 4 and `submission/CHECKLIST.md`.
+Replit is compulsory for the submission (Participant Handbook 9.2; proof per 10.6). The live app runs on Replit with Replit PostgreSQL (decision D4). Steps and the fallback plan: `docs/DEPLOY.md`. See also `docs/PLAN.md` phase 4 and `submission/CHECKLIST.md`.
 
 ## Licence
 
