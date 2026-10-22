@@ -1,8 +1,9 @@
 // Data model for the Orbyte Project Commitment Copilot (MVP).
 // Owner: Workstream B (schema changes need a heads-up in the team chat; see docs/CONTRACTS.md).
-// SQLite for local dev. For Replit deployment, switch provider to "postgresql" and set DATABASE_URL.
-// Enum-like fields are strings because SQLite has no enums; allowed values are listed in comments
-// and mirrored as TypeScript unions in src/lib/engine/types.ts.
+// PostgreSQL everywhere (decision D4): Replit PostgreSQL when deployed, docker-compose.yml locally
+// and as the fallback. Only DATABASE_URL changes between them.
+// Enum-like fields are plain strings (kept from the SQLite start, so any Postgres works unchanged);
+// allowed values are listed in comments and mirrored as TypeScript unions in src/lib/engine/types.ts.
 // Money is always integer sen (RM x 100). Dates are calendar dates in MYT, stored as "YYYY-MM-DD".
 
 generator client {
@@ -10,7 +11,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
