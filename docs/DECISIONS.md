@@ -33,3 +33,4 @@ Record each team decision with date and who decided. Design decisions stay with 
 | 2026-10-21 | Recurring occurrences dated before the opening date are counted on the opening date and flagged overdue | Same as one-off overdue events (rule 2); ignoring them would show more cash than reality |
 | 2026-10-21 | Downside: an overdue estimated receipt moves to the opening date first, then gets the customer delay | It is already late; assuming it arrives on day 0 would overstate cash |
 | 2026-10-21 | Downside cost increase applies to project and one-off OUT events, not to recurring costs (payroll, rent) | Recurring costs are fixed amounts |
+| 2026-10-22 | Demo company lives in `src/lib/demo/data.ts`, shared by the seed, the reset and a test that checks the demo story (base above buffer, downside below) | One source of truth; the video cannot silently break when someone edits the seed |
