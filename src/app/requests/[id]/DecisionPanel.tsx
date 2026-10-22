@@ -32,10 +32,10 @@ export function DecisionPanel({ requestId, forecastRunId }: { requestId: string;
     <div>
       <div className="field">
         <label htmlFor="reason">Reason (kept in the activity log)</label>
-        <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} style={{ minHeight: 70 }} />
+        <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} style={{ minHeight: 80 }} />
       </div>
       {error && <p className="error">{error}</p>}
-      <div className="actions">
+      <div className="actions stack">
         <button onClick={() => decide("APPROVED")} disabled={busy || noReason}>Approve and send for signature</button>
         <button className="secondary" onClick={() => decide("NEEDS_INFO")} disabled={busy || noReason}>Ask for more information</button>
         <button className="secondary" onClick={() => decide("REJECTED")} disabled={busy || noReason}>Decline</button>
