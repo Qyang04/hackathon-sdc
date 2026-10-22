@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Hanken_Grotesk, IBM_Plex_Mono, Newsreader } from "next/font/google";
+import { Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -8,8 +8,7 @@ import { RoleSwitcher } from "./RoleSwitcher";
 import { NavLinks } from "./NavLinks";
 
 // Fonts are downloaded at build time and served by the app (no runtime call to Google)
-const hanken = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-hanken" });
-const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-plex-mono" });
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
 const newsreader = Newsreader({ subsets: ["latin"], style: "italic", variable: "--font-newsreader" });
 
 export const metadata: Metadata = {
@@ -24,7 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     prisma.commitmentRequest.count({ where: { status: "CHECKED" } }),
   ]);
   return (
-    <html lang="en" className={`${hanken.variable} ${plexMono.variable} ${newsreader.variable}`}>
+    <html lang="en" className={`${jakarta.variable} ${newsreader.variable}`}>
       <body>
         <div className="shell">
           <aside className="sidebar">

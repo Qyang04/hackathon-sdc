@@ -90,7 +90,7 @@ export default async function OverviewPage() {
             <thead><tr><th>Job</th><th>Client</th><th>Starts</th><th className="num">Contract value</th><th>Status</th></tr></thead>
             <tbody>
               {requests.map((r) => (
-                <tr key={r.id}>
+                <tr key={r.id} className="row-link">
                   <td><Link href={`/requests/${r.id}`}>{r.title}</Link></td>
                   <td>{r.client}</td>
                   <td className="date">{r.startDate}</td>

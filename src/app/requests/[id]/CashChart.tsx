@@ -27,7 +27,8 @@ export function CashChart({ baseline, withJob, reserveSen }: { baseline: WeeklyP
   const lowIdx = withJob.reduce((best, p, i) => (p.lowestDailySen < withJob[best].lowestDailySen ? i : best), 0);
   const low = withJob[lowIdx];
   const lowBelow = low.lowestDailySen < reserveSen;
-  const lowLabelY = y(low.lowestDailySen) - 12 < PAD.top ? y(low.lowestDailySen) + 20 : y(low.lowestDailySen) - 12;
+  // Label below the dot (the line usually comes down into the low point from above); above it when near the axis
+  const lowLabelY = y(low.lowestDailySen) + 22 <= bottom - 4 ? y(low.lowestDailySen) + 22 : y(low.lowestDailySen) - 12;
   const lowAnchor = lowIdx === 0 ? "start" : lowIdx === last ? "end" : "middle";
 
   // End labels: keep at least 13px apart so "With job" / "Without" / "Buffer" never overlap
@@ -52,19 +53,19 @@ export function CashChart({ baseline, withJob, reserveSen }: { baseline: WeeklyP
         {ticks.map((t) => (
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
-            <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fontFamily="var(--font-mono)" fill="var(--on-navy-muted)">{shortRM(t)}</text>
+            <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fill="var(--on-navy-muted)">{shortRM(t)}</text>
           </g>
         ))}
         {weeks.map((w, i) =>
           i % 2 === 0 ? (
-            <text key={w} x={x(i)} y={H - 6} textAnchor="middle" fontSize={11} fontFamily="var(--font-mono)" fill="var(--on-navy-muted)">{prettyDate(w, false)}</text>
+            <text key={w} x={x(i)} y={H - 6} textAnchor="middle" fontSize={11} fill="var(--on-navy-muted)">{prettyDate(w, false)}</text>
           ) : null,
         )}
         <line x1={PAD.left} x2={W - PAD.right} y1={y(reserveSen)} y2={y(reserveSen)} stroke="var(--accent-light)" strokeWidth={1.5} strokeDasharray="6 4" />
         <path d={path(baseline)} fill="none" stroke="var(--chart-baseline)" strokeWidth={2} strokeLinejoin="round" pathLength={1} className="draw-in" />
         <path d={path(withJob)} fill="none" stroke="#fff" strokeWidth={2.5} strokeLinejoin="round" pathLength={1} className="draw-in" />
         <circle cx={x(lowIdx)} cy={y(low.lowestDailySen)} r={5} fill={lowBelow ? "var(--danger-light)" : "var(--accent-light)"} stroke="var(--navy-deep)" strokeWidth={2} />
-        <text x={x(lowIdx)} y={lowLabelY} textAnchor={lowAnchor} fontSize={11} fontWeight={600} fontFamily="var(--font-mono)" fill={lowBelow ? "var(--danger-light)" : "var(--accent-light)"}>
+        <text x={x(lowIdx)} y={lowLabelY} textAnchor={lowAnchor} fontSize={11} fontWeight={600} fill={lowBelow ? "var(--danger-light)" : "var(--accent-light)"}>
           {`lowest ${shortRM(low.lowestDailySen)}`}
         </text>
         {ends.map((l) => (
