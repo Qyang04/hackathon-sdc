@@ -7,6 +7,13 @@ import type { ComparisonResult, ScenarioName } from "./engine/types";
 import type { PolicyResult } from "./policy/types";
 import type { ValidationIssue } from "./validation/types";
 import type { DecisionBrief } from "./ai/schemas";
+import { z } from "zod";
+
+const SavedReserve = z.object({
+  settings: z.object({
+    reserveSen: z.number().int().nonnegative(),
+  }),
+});
 
 export interface CheckInputs {
   settings: unknown; // ForecastSettings + policy config, as used
@@ -17,6 +24,7 @@ export interface CheckInputs {
 export interface SavedCheck {
   runId: string;
   createdAt: Date;
+  reserveSen: number | null; // Reserve used for this calculation.
   validation: ValidationIssue[];
   comparisons: ComparisonResult[];
   policy: PolicyResult;
@@ -61,6 +69,9 @@ export async function loadLatestCheck(requestId: string): Promise<SavedCheck | n
   const base = await prisma.forecastRun.findFirst({ where: { requestId, scenario: "BASE" }, orderBy: { createdAt: "desc" } });
   if (!base) return null;
 
+  const inputs = JSON.parse(base.inputJson) as CheckInputs;
+  const savedReserve = SavedReserve.safeParse(inputs);
+
   const comparisons: ComparisonResult[] = [];
   const baseResult = JSON.parse(base.resultJson) as ComparisonResult | null;
   if (baseResult) {
@@ -78,9 +89,14 @@ export async function loadLatestCheck(requestId: string): Promise<SavedCheck | n
   return {
     runId: base.id,
     createdAt: base.createdAt,
-    validation: (JSON.parse(base.inputJson) as CheckInputs).validation,
+    reserveSen: savedReserve.success
+      ? savedReserve.data.settings.reserveSen
+      : null,
+    validation: inputs.validation,
     comparisons,
     policy: JSON.parse(base.policyJson) as PolicyResult,
-    brief: base.briefJson ? (JSON.parse(base.briefJson) as DecisionBrief) : null,
+    brief: base.briefJson 
+      ? (JSON.parse(base.briefJson) as DecisionBrief) 
+      : null,
   };
 }

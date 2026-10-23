@@ -15,6 +15,16 @@ const DecisionBody = z.object({
   forecastRunId: z.string().min(1),
 });
 
+const SavedForecastInput = z.object({
+  settings: z.object({
+    openingCashSen: z.number().int(),
+    openingDate: z.string(),
+    reserveSen: z.number().int(),
+    approvalThresholdSen: z.number().int(),
+    customerDelayDays: z.number().int(),
+  }),
+});
+
 const OUTCOME_TEXT = { APPROVED: "Approved", REJECTED: "Declined", NEEDS_INFO: "Asked for more information" } as const;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +47,64 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!latest || latest.id !== forecastRunId) {
     return NextResponse.json({ error: "The figures have changed since this page was loaded. Reload and decide again." }, { status: 409 });
   }
+
+  
+  // Approval requires a check calculated with current settings.
+  if (outcome === "APPROVED") {
+    const company = await prisma.companySettings.findUnique({
+      where: { id: 1 },
+    });
+
+    if (!company) {
+      return NextResponse.json(
+        { error: "Company settings are unavailable. Approval cannot proceed." },
+        { status: 503 },
+      );
+    }
+
+    let savedInput: unknown;
+
+    try {
+      savedInput = JSON.parse(latest.inputJson);
+    } catch {
+      return NextResponse.json(
+        { error: "The saved check cannot be verified. Run the check again." },
+        { status: 409 },
+      );
+    }
+
+    const saved = SavedForecastInput.safeParse(savedInput);
+
+    if (!saved.success) {
+      return NextResponse.json(
+        { error: "The saved settings cannot be verified. Run the check again." },
+        { status: 409 },
+      );
+    }
+
+    const fields = [
+      "openingCashSen",
+      "openingDate",
+      "reserveSen",
+      "approvalThresholdSen",
+      "customerDelayDays",
+    ] as const;
+
+    const settingsChanged = fields.some(
+      (field) => saved.data.settings[field] !== company[field],
+    );
+
+    if (settingsChanged) {
+      return NextResponse.json(
+        {
+          error:
+            "Company settings have changed since this check. Run the check again before approving.",
+        },
+        { status: 409 },
+      );
+    }
+  }
+
 
   const selfApproved = request.requestedBy === session.name;
   await prisma.$transaction([
