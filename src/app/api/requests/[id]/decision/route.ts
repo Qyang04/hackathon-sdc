@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { canDecide, getSession } from "@/lib/session";
 import { logActivity } from "@/lib/audit";
 import { simulatedESign } from "@/lib/adapters/orbyte";
+import { lockCompanySettings } from "@/lib/settings-lock";
 
 const DecisionBody = z.object({
   outcome: z.enum(["APPROVED", "REJECTED", "NEEDS_INFO"]),
@@ -36,89 +37,129 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const parsed = DecisionBody.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid decision", issues: parsed.error.issues }, { status: 400 });
   const { outcome, reason, forecastRunId } = parsed.data;
+  const result = await prisma.$transaction(async (tx) => {
+    await lockCompanySettings(tx);
 
-  const request = await prisma.commitmentRequest.findUnique({ where: { id } });
-  if (!request) return NextResponse.json({ error: "Request not found" }, { status: 404 });
-  if (request.status !== "CHECKED") {
-    return NextResponse.json({ error: `Only a checked request can be decided (status ${request.status})` }, { status: 409 });
-  }
-  // The decision must refer to the figures the owner saw: the latest check
-  const latest = await prisma.forecastRun.findFirst({ where: { requestId: id, scenario: "BASE" }, orderBy: { createdAt: "desc" } });
-  if (!latest || latest.id !== forecastRunId) {
-    return NextResponse.json({ error: "The figures have changed since this page was loaded. Reload and decide again." }, { status: 409 });
-  }
+    const request = await tx.commitmentRequest.findUnique({ where: { id } });
+    if (!request) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+    if (request.status !== "CHECKED") {
+      return NextResponse.json({ error: `Only a checked request can be decided (status ${request.status})` }, { status: 409 });
+    }
+    // The decision must refer to the figures the owner saw: the latest check
+    const latest = await tx.forecastRun.findFirst({ where: { requestId: id, scenario: "BASE" }, orderBy: { createdAt: "desc" } });
+    if (!latest || latest.id !== forecastRunId) {
+      return NextResponse.json({ error: "The figures have changed since this page was loaded. Reload and decide again." }, { status: 409 });
+    }
 
-  
-  // Approval requires a check calculated with current settings.
-  if (outcome === "APPROVED") {
-    const company = await prisma.companySettings.findUnique({
-      where: { id: 1 },
+    
+    // Approval requires a check calculated with current settings.
+    if (outcome === "APPROVED") {
+      const company = await tx.companySettings.findUnique({
+        where: { id: 1 },
+      });
+
+      if (!company) {
+        return NextResponse.json(
+          { error: "Company settings are unavailable. Approval cannot proceed." },
+          { status: 503 },
+        );
+      }
+
+      let savedInput: unknown;
+
+      try {
+        savedInput = JSON.parse(latest.inputJson);
+      } catch {
+        return NextResponse.json(
+          { error: "The saved check cannot be verified. Run the check again." },
+          { status: 409 },
+        );
+      }
+
+      const saved = SavedForecastInput.safeParse(savedInput);
+
+      if (!saved.success) {
+        return NextResponse.json(
+          { error: "The saved settings cannot be verified. Run the check again." },
+          { status: 409 },
+        );
+      }
+
+      const fields = [
+        "openingCashSen",
+        "openingDate",
+        "reserveSen",
+        "approvalThresholdSen",
+        "customerDelayDays",
+      ] as const;
+
+      const settingsChanged = fields.some(
+        (field) => saved.data.settings[field] !== company[field],
+      );
+
+      if (settingsChanged) {
+        return NextResponse.json(
+          {
+            error:
+              "Company settings have changed since this check. Run the check again before approving.",
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+
+    const selfApproved = request.requestedBy === session.name;
+
+    // Claim the checked request before recording the decision.
+    const claimed = await tx.commitmentRequest.updateMany({
+      where: { id, status: "CHECKED" },
+      data: { status: outcome },
     });
 
-    if (!company) {
+    if (claimed.count !== 1) {
       return NextResponse.json(
-        { error: "Company settings are unavailable. Approval cannot proceed." },
-        { status: 503 },
-      );
-    }
-
-    let savedInput: unknown;
-
-    try {
-      savedInput = JSON.parse(latest.inputJson);
-    } catch {
-      return NextResponse.json(
-        { error: "The saved check cannot be verified. Run the check again." },
+        { error: "The request has changed. Reload before deciding." },
         { status: 409 },
       );
     }
 
-    const saved = SavedForecastInput.safeParse(savedInput);
+    await tx.decision.create({
+      data: {
+        requestId: id,
+        forecastRunId,
+        actorRole: session.role,
+        actorName: session.name,
+        outcome,
+        reason,
+        selfApproved,
+      },
+    });
 
-    if (!saved.success) {
-      return NextResponse.json(
-        { error: "The saved settings cannot be verified. Run the check again." },
-        { status: 409 },
-      );
-    }
+    await tx.activityLog.create({
+      data: {
+        requestId: id,
+        actor: session.name,
+        action: "DECISION",
+        detail:
+          `${OUTCOME_TEXT[outcome]}: ${reason}` +
+          (selfApproved
+            ? " (decided by the person who created the request)"
+            : ""),
+      },
+    });
 
-    const fields = [
-      "openingCashSen",
-      "openingDate",
-      "reserveSen",
-      "approvalThresholdSen",
-      "customerDelayDays",
-    ] as const;
+    return { request, selfApproved };
+  }, {
+    maxWait: 10_000,
+    timeout: 20_000,
+  });
 
-    const settingsChanged = fields.some(
-      (field) => saved.data.settings[field] !== company[field],
-    );
-
-    if (settingsChanged) {
-      return NextResponse.json(
-        {
-          error:
-            "Company settings have changed since this check. Run the check again before approving.",
-        },
-        { status: 409 },
-      );
-    }
+  if (result instanceof NextResponse) {
+    return result;
   }
 
-
-  const selfApproved = request.requestedBy === session.name;
-  await prisma.$transaction([
-    prisma.decision.create({
-      data: { requestId: id, forecastRunId, actorRole: session.role, actorName: session.name, outcome, reason, selfApproved },
-    }),
-    prisma.commitmentRequest.update({ where: { id }, data: { status: outcome } }),
-  ]);
-  await logActivity({
-    requestId: id,
-    actor: session.name,
-    action: "DECISION",
-    detail: `${OUTCOME_TEXT[outcome]}: ${reason}${selfApproved ? " (decided by the person who created the request)" : ""}`,
-  });
+  const { request, selfApproved } = result;
 
   // Outcome action: send the acceptance for e-signature (simulated Orbyte eSign)
   let envelopeId: string | null = null;

@@ -40,6 +40,7 @@ const updated = {
 };
 
 const tx = {
+  $queryRaw: vi.fn().mockResolvedValue([]),
   companySettings: {
     findUnique: mocks.findUnique,
     update: mocks.update,
@@ -60,6 +61,7 @@ function request(body: unknown): Request {
 describe("PATCH /api/settings", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    tx.$queryRaw.mockResolvedValue([]);
 
     mocks.getSession.mockResolvedValue({
       role: "OWNER",

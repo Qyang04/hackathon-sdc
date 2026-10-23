@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession, canDecide } from "@/lib/session";
 import { UpdateSettings } from "./schemas";
+import { lockCompanySettings } from "@/lib/settings-lock";
 
 export async function PATCH(req: Request) {
   // Check permission before processing an update.
@@ -29,6 +30,9 @@ export async function PATCH(req: Request) {
 
   // Save the update and its activity record together.
   const settings = await prisma.$transaction(async (tx) => {
+    await lockCompanySettings(tx); 
+    // ensure two settings updates cannot both read the same old values before writing their audit records
+
     const previous = await tx.companySettings.findUnique({
       where: { id: 1 },
     });

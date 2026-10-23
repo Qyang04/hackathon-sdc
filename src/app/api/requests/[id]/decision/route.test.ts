@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   logActivity: vi.fn(),
   sendForSignature: vi.fn(),
+  queryRaw: vi.fn(),
+  claimRequest: vi.fn(),
+  createActivity: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -62,6 +65,26 @@ const savedRun = {
   inputJson: JSON.stringify({ settings }),
 };
 
+const tx = {
+  $queryRaw: mocks.queryRaw,
+  commitmentRequest: {
+    findUnique: mocks.findRequest,
+    updateMany: mocks.claimRequest,
+  },
+  forecastRun: {
+    findFirst: mocks.findRun,
+  },
+  companySettings: {
+    findUnique: mocks.findCompany,
+  },
+  decision: {
+    create: mocks.createDecision,
+  },
+  activityLog: {
+    create: mocks.createActivity,
+  },
+};
+
 function decide(
   outcome: "APPROVED" | "REJECTED" | "NEEDS_INFO" = "APPROVED",
 ) {
@@ -84,9 +107,10 @@ function decide(
 }
 
 function expectNoDecisionWrites() {
+  expect(mocks.claimRequest).not.toHaveBeenCalled();
   expect(mocks.createDecision).not.toHaveBeenCalled();
+  expect(mocks.createActivity).not.toHaveBeenCalled();
   expect(mocks.updateRequest).not.toHaveBeenCalled();
-  expect(mocks.transaction).not.toHaveBeenCalled();
   expect(mocks.logActivity).not.toHaveBeenCalled();
   expect(mocks.sendForSignature).not.toHaveBeenCalled();
 }
@@ -114,8 +138,13 @@ describe("decision settings freshness", () => {
     mocks.updateRequest.mockResolvedValue({ status: "APPROVED" });
     mocks.logActivity.mockResolvedValue({ id: "activity-1" });
 
+    mocks.queryRaw.mockResolvedValue([{ id: 1 }]);
+    mocks.claimRequest.mockResolvedValue({ count: 1 });
+    mocks.createActivity.mockResolvedValue({ id: "activity-1" });
+
     mocks.transaction.mockImplementation(
-      (operations: Promise<unknown>[]) => Promise.all(operations),
+      async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
     );
 
     mocks.sendForSignature.mockResolvedValue({
@@ -217,9 +246,57 @@ describe("decision settings freshness", () => {
     const response = await decide();
 
     expect(response.status).toBe(403);
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(mocks.queryRaw).not.toHaveBeenCalled();
     expect(mocks.findRequest).not.toHaveBeenCalled();
     expect(mocks.findRun).not.toHaveBeenCalled();
     expect(mocks.findCompany).not.toHaveBeenCalled();
     expectNoDecisionWrites();
   });
+
+  it("records the decision and audit through the transaction", async () => {
+  const response = await decide();
+
+  expect(response.status).toBe(200);
+  expect(mocks.queryRaw).toHaveBeenCalledOnce();
+
+  expect(mocks.claimRequest).toHaveBeenCalledWith({
+    where: { id: "request-1", status: "CHECKED" },
+    data: { status: "APPROVED" },
+  });
+
+  expect(mocks.createActivity).toHaveBeenCalledWith({
+    data: expect.objectContaining({
+      requestId: "request-1",
+      actor: "Demo Owner",
+      action: "DECISION",
+    }),
+  });
+});
+
+it("does not create a decision when the status claim fails", async () => {
+  mocks.claimRequest.mockResolvedValue({ count: 0 });
+
+  const response = await decide();
+
+  expect(response.status).toBe(409);
+  expect(mocks.createDecision).not.toHaveBeenCalled();
+  expect(mocks.createActivity).not.toHaveBeenCalled();
+  expect(mocks.sendForSignature).not.toHaveBeenCalled();
+  expect(mocks.updateRequest).not.toHaveBeenCalled();
+  expect(mocks.logActivity).not.toHaveBeenCalled();
+});
+
+it("does not send e-sign when the decision audit write fails", async () => {
+  mocks.createActivity.mockRejectedValue(
+    new Error("Decision audit failed"),
+  );
+
+  await expect(decide()).rejects.toThrow("Decision audit failed");
+
+  expect(mocks.sendForSignature).not.toHaveBeenCalled();
+  expect(mocks.updateRequest).not.toHaveBeenCalled();
+  expect(mocks.logActivity).not.toHaveBeenCalled();
+});
+
 });
