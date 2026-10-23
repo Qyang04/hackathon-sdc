@@ -54,11 +54,15 @@ DRAFT --(check run, policy BLOCKED)--> NEEDS_INFO --(edited)--> DRAFT
 DRAFT --(check run)--> CHECKED --(owner APPROVED)--> APPROVED --(e-sign sent)--> COMPLETED
                                --(owner REJECTED)--> REJECTED
                                --(owner NEEDS_INFO)--> NEEDS_INFO
+CHECKED --(check run again, e.g. after a settings change)--> CHECKED
 ```
 
 - Only `OWNER` can decide (checked on the server). A decision must reference the latest `ForecastRun`.
 - If the owner created the request, the decision is stored with `selfApproved = true` and shown in the activity log.
 - Every transition writes an `ActivityLog` row.
+- A check keeps the settings it was run with (`ForecastRun.inputJson`), and the result page shows its saved buffer.
+  Approval is refused (409) if company settings changed since the latest check; run the check again first.
+- A check that finishes after the request was edited or decided, or after settings changed, is not saved (409).
 
 ## AI rules (`src/lib/ai`)
 
@@ -79,6 +83,7 @@ DRAFT --(check run)--> CHECKED --(owner APPROVED)--> APPROVED --(e-sign sent)-->
 | `GET /api/requests/:id` | Request, events, latest run, decisions, activity | Done |
 | `PATCH /api/requests/:id` | Edit draft, confirm AI-extracted events, add/remove manual events | Done |
 | `POST /api/extract` | AI milestones from pasted text | Done |
-| `POST /api/requests/:id/forecast` | Validate, three scenarios, policy, brief, save run | Done (brief is null until `generateBrief` exists) |
+| `POST /api/requests/:id/forecast` | Validate, three scenarios, policy, brief, save run | Done (brief is null if AI is not configured, fails or takes over 20 s) |
 | `POST /api/requests/:id/decision` | Owner decision + outcome action | Done |
 | `POST /api/reset` | Re-seed demo data (owner only; 403 for staff) | Done |
+| `PATCH /api/settings` | Owner changes buffer, review threshold, customer delay (0 allowed; delay at most 90 days); logged | Done (no settings page yet) |

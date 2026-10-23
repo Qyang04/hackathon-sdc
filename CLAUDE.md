@@ -14,7 +14,7 @@ Preliminary deadline: **Sun 25 Oct 2026, 07:59:59 MYT** (target: submit Sat 24 O
 - `npm test` — vitest (engine, policy, validation)
 - `npm run typecheck` — tsc
 - `npm run build` — prisma generate + next build
-- `npm run db:reset` — recreate SQLite DB and seed demo data
+- `npm run db:reset` — recreate the PostgreSQL tables and seed demo data (local DB: `docker compose up -d`, port 5433)
 - Prisma CLI is local: use `npx prisma ...`, not `prisma ...`
 - A pre-push hook runs typecheck, test and build; keep them green.
 
