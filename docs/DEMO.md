@@ -67,16 +67,18 @@ Then: staff tries to decide (blocked), switch to Owner (Aisyah), give a reason, 
 
 The demo figures above are pinned to the seed settings: RM 30,000 buffer,
 RM 50,000 review threshold, 21-day customer delay. The owner can change
-these live, and every figure updates — so **reset before demoing or
-recording** (`POST /api/reset` on the page, or `npm run db:reset`) to get
-back to the numbers in this doc.
+them through `PATCH /api/settings` (there is no settings page yet). A check
+keeps the settings it was run with; after a change, the owner must run the
+check again before approving. **Reset before demoing or recording** (Reset
+demo data on the overview, or `npm run db:reset`) to get back to the numbers
+in this doc.
 
 What each setting does when it is on, and what 0 means:
 
 | Setting | On (non-zero) | 0 means |
 | --- | --- | --- |
 | Buffer | Red warning the moment projected cash dips below it | Only react when cash actually goes negative |
-| Review threshold | Jobs above it always go to the owner (staff blocked) | Every job needs the owner — the strictest setting, not "off" |
+| Review threshold | Jobs above it get a "needs your review" flag. The owner decides every job either way; staff never can | Every job is flagged — the strictest setting, not "off" |
 | Customer delay | Estimated client payments pushed this many days later in "if things slip" | Estimated payments counted on their promised date |
 
 The same explanations, with the live values, are on the app's
