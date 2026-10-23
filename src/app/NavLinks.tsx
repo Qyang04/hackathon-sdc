@@ -8,6 +8,7 @@ export function NavLinks({ awaiting }: { awaiting: number }) {
   const links = [
     { href: "/", text: "Overview", active: path === "/" || (path.startsWith("/requests/") && path !== "/requests/new") },
     { href: "/requests/new", text: "New check", active: path === "/requests/new" },
+    { href: "/how", text: "How it works", active: path.startsWith("/how") },
     { href: "/activity", text: "Activity", active: path === "/activity" },
   ];
   return (
