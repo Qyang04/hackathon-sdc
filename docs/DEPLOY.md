@@ -12,16 +12,25 @@ The laptop database cannot serve the Replit app: Replit cannot reach `localhost`
 
 ## First deploy on Replit
 
-1. Replit, **Create, Import from GitHub**, choose this repo, branch `main`.
-2. Shell: `npm install`, then `npm test`.
-3. Tools, **Database**: add PostgreSQL. Replit sets `DATABASE_URL` in Secrets.
+1. Replit, **Create, Import from GitHub**, choose this repo, branch `main`. Do not let Replit Agent build or change
+   anything; if it already did, `git reset --hard origin/main` and `git clean -fd` in the Shell.
+2. Shell (the **+** next to Preview): `npm install`, then `npm test`.
+3. Tools, **Database**: add PostgreSQL. Replit sets `DATABASE_URL` in Secrets; do not add it by hand.
 4. Secrets: add `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` if AI is used (D5). Never put them in the repo.
 5. Shell: `npx prisma db push` (creates the tables), then `npm run db:seed`.
-6. **Deploy**: build command `npm run build`, run command `npm run start` (it listens on `0.0.0.0` and `$PORT`).
-7. If Replit shows a separate production database, the deployment uses that one: run `npx prisma db push` against it too,
-   then open the live site as Owner and press **Reset demo data**.
+6. **Publish**: build and run commands come from the `[deployment]` section of `.replit` (`npm run build`,
+   `npm run start`, which listens on `0.0.0.0` and `$PORT`); the Publish screen has no fields for them. Choose
+   Autoscale, the smallest machine with max 1, region Asia, and tick "Set up your production database with your current
+   development data". Leave analytics and the other add-ons off.
+7. The live site uses the production database. If it ever needs fresh demo data, open the live site as Owner and press
+   **Reset demo data**.
 8. Open the `.replit.app` link in an incognito window. Save a screenshot of the deployment page and the URL for the
    Technical & Tools Declaration (PH 10.6).
+
+To update the live site: `git pull` in the Replit Shell, then **Publish** again.
+
+If pasting into the Replit Shell adds `^[[200~` in front of a command, type the command by hand or paste one line at a
+time.
 
 Replit PostgreSQL sleeps when idle; the first request after a quiet period can take a few seconds. Open the live link
 once before recording the video or before judging.
