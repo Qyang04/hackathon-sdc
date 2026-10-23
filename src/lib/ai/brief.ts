@@ -32,12 +32,6 @@ export async function generateBrief(
       findings: policy.findings,
     },
   };
-  // The lowest cash balance under each scenario.
-  // When that lowest balance occurs.
-  // The first date below the reserve—null means no breach.
-  // Extra cash needed to meet the reserve.
-  // The policy findings.
-
 
   const systemPrompt = `
     You explain computed cash-flow results to an SME owner.
@@ -69,7 +63,7 @@ export async function generateBrief(
     DecisionBrief, //validates the response’s structure
     systemPrompt, //defines the explanation rules
     JSON.stringify(evidence), //converts your evidence object into text
-    60_000, // Temporary: allow 60 seconds for live testing.
+    20_000, // the check waits for the brief; past this the page shows the figures without it
   );
 
   // Match RM amounts, including an optional negative sign.
@@ -98,10 +92,3 @@ export async function generateBrief(
 
   return brief;
 }
-
-
-// Collects calculated evidence.
-// Requests a structured AI explanation.
-// Checks RM amounts across all four response fields.
-// Throws if an amount is unsupported.
-// Returns the brief only after validation.
