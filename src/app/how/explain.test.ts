@@ -56,10 +56,12 @@ describe("buildSettingsRows", () => {
     expect(rows.map((r) => r.valueSen)).toEqual([3_000_000, 5_000_000, 21]);
   });
 
-  it("documents that threshold 0 is the strictest setting, not off", () => {
+  it("documents that threshold 0 flags every job (strictest, not off) and that the owner always decides", () => {
     const rows = buildSettingsRows({ reserveSen: 0, approvalThresholdSen: 0, customerDelayDays: 0 });
     const threshold = rows.find((r) => r.key === "approvalThresholdSen");
     expect(threshold?.zeroMeans).toContain("strictest");
+    expect(threshold?.zeroMeans).toContain("flagged");
+    expect(threshold?.whatItDoes).toContain("Every job needs the owner");
     const reserve = rows.find((r) => r.key === "reserveSen");
     expect(reserve?.zeroMeans).toContain("negative");
   });

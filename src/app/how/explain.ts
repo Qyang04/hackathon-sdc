@@ -69,10 +69,10 @@ export function buildSettingsRows(s: { reserveSen: number; approvalThresholdSen:
     },
     {
       key: "approvalThresholdSen",
-      label: "Jobs the owner must review",
-      whatItDoes: "Any job above this amount is locked for the owner to accept or decline — staff cannot accept it alone.",
+      label: "Review threshold",
+      whatItDoes: "Every job needs the owner's decision; staff can never accept one. A job above this amount also gets a 'needs your review' flag, even if cash looks fine.",
       valueSen: s.approvalThresholdSen,
-      zeroMeans: "0 = every single job needs the owner. This is the strictest setting, not 'off'.",
+      zeroMeans: "0 = every job is flagged for review. This is the strictest setting, not 'off'.",
     },
     {
       key: "customerDelayDays",
@@ -106,7 +106,7 @@ export const WARNING_GLOSSARY: GlossaryEntry[] = [
   { code: "DATA_INCOMPLETE", where: "Decision rules", meaning: "Data errors are still open, so no cash figures can be trusted yet. The check is blocked." },
   { code: "RESERVE_BREACH_BASE", where: "Decision rules", meaning: "With this job, cash falls below your buffer as planned — or it was already below before the job. Either way the owner sees it." },
   { code: "RESERVE_BREACH_DOWNSIDE", where: "Decision rules", meaning: "As planned you are fine, but if customers pay late and costs rise, cash dips below the buffer. Still worth a look." },
-  { code: "ABOVE_APPROVAL_THRESHOLD", where: "Decision rules", meaning: "The job is above the amount you asked to always review, so it goes to the owner." },
+  { code: "ABOVE_APPROVAL_THRESHOLD", where: "Decision rules", meaning: "The job is above the amount you asked to always review, so it is flagged even if cash looks fine. The owner decides every job either way." },
 ];
 
 /** Guards the glossary against drifting from the real codes. */
