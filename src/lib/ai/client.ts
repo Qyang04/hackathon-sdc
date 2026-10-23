@@ -1,5 +1,7 @@
 // Minimal client for any OpenAI-compatible chat-completions endpoint. Owner: Workstream B.
 // The provider is a team decision (D5); configure it with LLM_BASE_URL / LLM_API_KEY / LLM_MODEL.
+// LLM_DISABLE_THINKING=true turns off hidden reasoning on models that support it (e.g. NVIDIA Nemotron);
+// with reasoning on, extraction took over 30 s. Leave it unset for OpenAI, which rejects the extra field.
 import type { z } from "zod";
 
 export class AiNotConfiguredError extends Error {
@@ -28,6 +30,7 @@ export async function completeJson<T>(
       model: process.env.LLM_MODEL,
       temperature: 0,
       response_format: { type: "json_object" },
+      ...(process.env.LLM_DISABLE_THINKING === "true" && { chat_template_kwargs: { enable_thinking: false } }),
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },

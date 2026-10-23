@@ -16,7 +16,9 @@ The laptop database cannot serve the Replit app: Replit cannot reach `localhost`
    anything; if it already did, `git reset --hard origin/main` and `git clean -fd` in the Shell.
 2. Shell (the **+** next to Preview): `npm install`, then `npm test`.
 3. Tools, **Database**: add PostgreSQL. Replit sets `DATABASE_URL` in Secrets; do not add it by hand.
-4. Secrets: add `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` if AI is used (D5). Never put them in the repo.
+4. Secrets: add `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` if AI is used (D5), one secret each, values without
+   quotes. For a reasoning model such as NVIDIA Nemotron also add `LLM_DISABLE_THINKING` = `true`, or extraction
+   times out. Never put them in the repo.
 5. Shell: `npx prisma db push` (creates the tables), then `npm run db:seed`.
 6. **Publish**: build and run commands come from the `[deployment]` section of `.replit` (`npm run build`,
    `npm run start`, which listens on `0.0.0.0` and `$PORT`); the Publish screen has no fields for them. Choose
