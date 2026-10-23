@@ -37,6 +37,11 @@ describe("UpdateSettings", () => {
     ).toBe(true);
   });
 
+  it("accepts a customer delay up to 90 days and rejects more", () => {
+    expect(UpdateSettings.safeParse({ customerDelayDays: 90 }).success).toBe(true);
+    expect(UpdateSettings.safeParse({ customerDelayDays: 91 }).success).toBe(false);
+  });
+
   it("rejects an empty update", () => {
     expect(UpdateSettings.safeParse({}).success).toBe(false);
   });

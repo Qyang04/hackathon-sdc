@@ -11,16 +11,16 @@ Workstreams (one accountable owner each; names in `docs/DECISIONS.md`):
 
 Each phase ends with an exit gate. Do not start the next phase's features until the gate passes; fix instead.
 
-## Progress (updated Thu 22 Oct 2026)
+## Progress (updated Fri 23 Oct 2026)
 
-Where we are: **Phase 1 and Phase 2 exit gates passed.** Phase 3 is next (Replit deploy rehearsal is the priority).
+Where we are: **Phase 1 and Phase 2 exit gates passed.** Phase 3: Replit deploy works; usability check and submission documents are left.
 Keep this section current when you merge something: move items from "Not done" to "Done".
 
 | Area | Done | Not done |
 | --- | --- | --- |
-| A — Engine & rules | Forecast engine (`expandRecurring`, `normaliseExisting`, `normaliseProposal`, `runForecast`, `compareProposal`); validation; policy; hand-calculated cases 1–4 in `docs/test-cases.md`; demo company (`src/lib/demo/data.ts`) with a test that guards the demo story; 55 tests passing | Open questions Q2 (receipt delayed past the horizon) and Q4 (what `excludeUnconfirmedReceipts` ever drops) in `docs/test-cases.md` |
-| B — Backend & AI | Every API route in `docs/CONTRACTS.md` (requests, extract, forecast, decision with simulated e-sign, owner-only reset); saving and loading checks (`src/lib/runs.ts`); simulated roles and activity log | **`generateBrief`** (`src/lib/ai/brief.ts`, the AI summary; the page shows a fallback until then); **LLM provider + key (D5)**, so extraction also works; **Replit deploy rehearsal** and database choice (D4) |
-| C — Frontend & UX | Navy/indigo redesign of every page; overview with lowest cash over 13 weeks; three-step wizard; result page (headline sentence, waterline chart, scenario tabs, rules, contributors, comparison table); owner decision panel; activity timeline; reset button (owner only); works at phone width | Usability check with a teammate who did not build it (Phase 3 gate); decide whether to keep `/preview/result` |
+| A — Engine & rules | Forecast engine (`expandRecurring`, `normaliseExisting`, `normaliseProposal`, `runForecast`, `compareProposal`); validation; policy; hand-calculated cases 1–4 in `docs/test-cases.md`; demo company (`src/lib/demo/data.ts`) with a test that guards the demo story; Q2 and Q4 decided; "How it works" page for judges (`/how`); 128 tests passing | Freeze the demo data before the video is recorded |
+| B — Backend & AI | Every API route in `docs/CONTRACTS.md` (requests, extract, forecast, decision with simulated e-sign, owner-only reset); saving and loading checks (`src/lib/runs.ts`); simulated roles and activity log; AI brief (`generateBrief`); owner settings API; PostgreSQL (D4); Replit deploy (`.replit`, `docs/DEPLOY.md`) | **LLM provider + key (D5)** recorded in DECISIONS and set as Replit secrets, so the brief and extraction work live |
+| C — Frontend & UX | Navy/indigo redesign of every page; overview with lowest cash over 13 weeks; three-step wizard; result page (headline sentence, waterline chart, scenario tabs, rules, contributors, comparison table); owner decision panel; activity timeline; reset button (owner only); works at phone width | Owner settings page (API is ready); usability check with a teammate who did not build it (Phase 3 gate); decide whether to keep `/preview/result` |
 | D — Submission | Demo script with expected figures (`docs/DEMO.md`); end-to-end testing handbook (`docs/E2E-TESTING.md`) | Owners and D1–D6 in `docs/DECISIONS.md`; SME conversations (D6); PRD; Technical & Tools Declaration (must list Claude Code and every other AI tool used); slides; video; everything in `submission/CHECKLIST.md` |
 
 ## Phase 0 — Set up (Wed 21 Oct, morning)

@@ -6,6 +6,8 @@ import { simulatedAccounting } from "@/lib/adapters/orbyte";
 import { addDays, compareProposal, formatRM, scenarioPresets } from "@/lib/engine";
 import { DEMO_PROPOSAL } from "@/lib/demo/data";
 import { buildSettingsRows, PIPELINE_STEPS, summariseComparison, WARNING_GLOSSARY } from "./explain";
+import { SCENARIO_TEXT } from "../requests/[id]/labels";
+import type { ScenarioName } from "@/lib/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +92,7 @@ export default async function HowItWorksPage() {
             {scenarioRows.map((r) => (
               <tr key={r.key}>
                 <td>
-                  <b>{r.key}</b>
+                  <b>{SCENARIO_TEXT[r.key as ScenarioName]?.name ?? r.key}</b>
                   <div className="muted small">{r.blurb}</div>
                 </td>
                 <td className="num">{formatRM(r.plannedMinSen)} <span className="muted small">on {r.plannedDate}</span></td>
@@ -104,8 +106,8 @@ export default async function HowItWorksPage() {
         <p className="muted small" style={{ marginBottom: 0 }}>
           {worstScenario
             ? worstScenario.key === "BASE"
-              ? `Reading the table: cash dips below the buffer from ${worstScenario.firstBreachDate} even as planned — the ${worstScenario.key} row shows it first.`
-              : `Reading the table: as planned, cash stays above the buffer, but in the ${worstScenario.key} scenario it dips below from ${worstScenario.firstBreachDate} — the risk the owner is shown, not hidden.`
+              ? `Reading the table: cash dips below the buffer from ${worstScenario.firstBreachDate} even as planned.`
+              : `Reading the table: as planned, cash stays above the buffer, but in the "${SCENARIO_TEXT[worstScenario.key as ScenarioName]?.name ?? worstScenario.key}" scenario it dips below from ${worstScenario.firstBreachDate} — the risk the owner is shown, not hidden.`
             : "Reading the table: cash stays above the buffer in every scenario."}
         </p>
       </section>
