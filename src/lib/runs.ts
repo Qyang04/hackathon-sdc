@@ -7,6 +7,14 @@ import type { ComparisonResult, ScenarioName } from "./engine/types";
 import type { PolicyResult } from "./policy/types";
 import type { ValidationIssue } from "./validation/types";
 import type { DecisionBrief } from "./ai/schemas";
+import { z } from "zod";
+import type { Prisma } from "@prisma/client";
+
+const SavedReserve = z.object({
+  settings: z.object({
+    reserveSen: z.number().int().nonnegative(),
+  }),
+});
 
 export interface CheckInputs {
   settings: unknown; // ForecastSettings + policy config, as used
@@ -17,6 +25,7 @@ export interface CheckInputs {
 export interface SavedCheck {
   runId: string;
   createdAt: Date;
+  reserveSen: number | null; // Reserve used for this calculation.
   validation: ValidationIssue[];
   comparisons: ComparisonResult[];
   policy: PolicyResult;
@@ -29,37 +38,73 @@ export async function saveCheck(
   comparisons: ComparisonResult[],
   policy: PolicyResult,
   brief: DecisionBrief | null,
+  transactionClient?: Prisma.TransactionClient,
 ): Promise<string> {
+  // Existing callers still get a transaction automatically.
+  // Callers with an active transaction can supply its client.
+  if (!transactionClient) {
+    return prisma.$transaction(
+      (tx) =>
+        saveCheck(
+          requestId,
+          inputs,
+          comparisons,
+          policy,
+          brief,
+          tx,
+        ),
+      {
+        maxWait: 10_000,
+        timeout: 20_000,
+      },
+    );
+  }
+
+  const tx = transactionClient;
   const inputJson = JSON.stringify(inputs);
   const policyJson = JSON.stringify(policy);
-  const base = comparisons.find((c) => c.scenario.name === "BASE") ?? null;
-  const others = comparisons.filter((c) => c.scenario.name !== "BASE");
+  const base = comparisons.find(
+    (comparison) => comparison.scenario.name === "BASE",
+  ) ?? null;
 
-  return prisma.$transaction(async (tx) => {
-    // Other scenarios first, BASE last, so the BASE row is never older than its siblings
-    for (const c of others) {
-      await tx.forecastRun.create({
-        data: { requestId, scenario: c.scenario.name, inputJson, resultJson: JSON.stringify(c), policyJson },
-      });
-    }
-    const run = await tx.forecastRun.create({
+  const others = comparisons.filter(
+    (comparison) => comparison.scenario.name !== "BASE",
+  );
+
+  // Save other scenarios first, then the BASE record.
+  for (const comparison of others) {
+    await tx.forecastRun.create({
       data: {
         requestId,
-        scenario: "BASE",
+        scenario: comparison.scenario.name,
         inputJson,
-        resultJson: JSON.stringify(base),
+        resultJson: JSON.stringify(comparison),
         policyJson,
-        briefJson: brief ? JSON.stringify(brief) : null,
       },
     });
-    return run.id;
-  }, { maxWait: 10_000, timeout: 20_000 }); // above Prisma's 2 s / 5 s defaults: Replit Postgres may be waking from sleep
+  }
+
+  const run = await tx.forecastRun.create({
+    data: {
+      requestId,
+      scenario: "BASE",
+      inputJson,
+      resultJson: JSON.stringify(base),
+      policyJson,
+      briefJson: brief ? JSON.stringify(brief) : null,
+    },
+  });
+
+  return run.id;
 }
 
 /** The latest check for a request, or null if it has never run. */
 export async function loadLatestCheck(requestId: string): Promise<SavedCheck | null> {
   const base = await prisma.forecastRun.findFirst({ where: { requestId, scenario: "BASE" }, orderBy: { createdAt: "desc" } });
   if (!base) return null;
+
+  const inputs = JSON.parse(base.inputJson) as CheckInputs;
+  const savedReserve = SavedReserve.safeParse(inputs);
 
   const comparisons: ComparisonResult[] = [];
   const baseResult = JSON.parse(base.resultJson) as ComparisonResult | null;
@@ -78,9 +123,14 @@ export async function loadLatestCheck(requestId: string): Promise<SavedCheck | n
   return {
     runId: base.id,
     createdAt: base.createdAt,
-    validation: (JSON.parse(base.inputJson) as CheckInputs).validation,
+    reserveSen: savedReserve.success
+      ? savedReserve.data.settings.reserveSen
+      : null,
+    validation: inputs.validation,
     comparisons,
     policy: JSON.parse(base.policyJson) as PolicyResult,
-    brief: base.briefJson ? (JSON.parse(base.briefJson) as DecisionBrief) : null,
+    brief: base.briefJson 
+      ? (JSON.parse(base.briefJson) as DecisionBrief) 
+      : null,
   };
 }

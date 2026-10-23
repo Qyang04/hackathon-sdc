@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { logActivity } from "@/lib/audit";
+import { lockCompanySettings } from "@/lib/settings-lock";
 import { simulatedAccounting } from "@/lib/adapters/orbyte";
 import { compareProposal, formatRM, scenarioPresets } from "@/lib/engine";
 import type { ComparisonResult, ForecastSettings, ProposalInput } from "@/lib/engine";
@@ -25,6 +25,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!RUNNABLE.includes(request.status)) {
     return NextResponse.json({ error: `A decision has already been made (status ${request.status})` }, { status: 409 });
   }
+  const requestSnapshot = JSON.stringify({
+    ...request,
+    events: [...request.events].sort((a, b) =>
+      a.id.localeCompare(b.id),
+    ),
+  });
   const company = await prisma.companySettings.findUnique({ where: { id: 1 } });
   if (!company) return NextResponse.json({ error: "Company settings missing; run the seed" }, { status: 500 });
 
@@ -87,20 +93,139 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     }
   }
 
-  // 5. Save, update status, log
-  const runId = await saveCheck(request.id, { settings: { ...settings, ...config, customerDelayDays: company.customerDelayDays }, proposal, validation }, comparisons, policy, brief);
-  const status = policy.outcome === "BLOCKED" ? "NEEDS_INFO" : "CHECKED";
-  await prisma.commitmentRequest.update({ where: { id }, data: { status } });
-
+  // 5. Recheck and save atomically after calculation and AI finish.
   const session = await getSession();
-  await logActivity({
-    requestId: id,
-    actor: session.name,
-    action: "FORECAST_RUN",
-    detail: base
-      ? `Check run: ${policy.outcome}; lowest cash with the job ${formatRM(base.withProposal.metrics.minBalanceSen)} on ${base.withProposal.metrics.minBalanceDate}`
-      : `Check run: ${policy.outcome}; ${validation.filter((i) => i.severity === "ERROR").length} item(s) to fix`,
+  const status = policy.outcome === "BLOCKED"
+    ? "NEEDS_INFO"
+    : "CHECKED";
+
+  const result = await prisma.$transaction(async (tx) => {
+    await lockCompanySettings(tx);
+
+    const current = await tx.commitmentRequest.findUnique({
+      where: { id },
+      include: { events: true },
+    });
+
+    if (!current) {
+      return NextResponse.json(
+        { error: "Request not found" },
+        { status: 404 },
+      );
+    }
+
+    if (!RUNNABLE.includes(current.status)) {
+      return NextResponse.json(
+        {
+          error:
+            "The request was decided while this check was running. The result was not saved.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const currentSnapshot = JSON.stringify({
+      ...current,
+      events: [...current.events].sort((a, b) =>
+        a.id.localeCompare(b.id),
+      ),
+    });
+
+    if (currentSnapshot !== requestSnapshot) {
+      return NextResponse.json(
+        {
+          error:
+            "The request changed while this check was running. Run the check again.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const currentCompany = await tx.companySettings.findUnique({
+      where: { id: 1 },
+    });
+
+    const settingFields = [
+      "openingCashSen",
+      "openingDate",
+      "reserveSen",
+      "approvalThresholdSen",
+      "customerDelayDays",
+    ] as const;
+
+    if (
+      !currentCompany ||
+      settingFields.some(
+        (field) => currentCompany[field] !== company[field],
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Company settings changed while this check was running. Run the check again.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const claimed = await tx.commitmentRequest.updateMany({
+      where: { id, status: current.status },
+      data: { status },
+    });
+
+    if (claimed.count !== 1) {
+      return NextResponse.json(
+        {
+          error:
+            "The request changed before the result could be saved. Run the check again.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const runId = await saveCheck(
+      request.id,
+      {
+        settings: {
+          ...settings,
+          ...config,
+          customerDelayDays: company.customerDelayDays,
+        },
+        proposal,
+        validation,
+      },
+      comparisons,
+      policy,
+      brief,
+      tx,
+    );
+
+    await tx.activityLog.create({
+      data: {
+        requestId: id,
+        actor: session.name,
+        action: "FORECAST_RUN",
+        detail: base
+          ? `Check run: ${policy.outcome}; lowest cash with the job ${formatRM(base.withProposal.metrics.minBalanceSen)} on ${base.withProposal.metrics.minBalanceDate}`
+          : `Check run: ${policy.outcome}; ${validation.filter((issue) => issue.severity === "ERROR").length} item(s) to fix`,
+      },
+    });
+
+    return { runId };
+  }, {
+    maxWait: 10_000,
+    timeout: 20_000,
   });
 
-  return NextResponse.json({ runId, validation, comparisons, policy, brief });
+  if (result instanceof NextResponse) {
+    return result;
+  }
+
+  return NextResponse.json({
+    runId: result.runId,
+    validation,
+    comparisons,
+    policy,
+    brief,
+  });
 }

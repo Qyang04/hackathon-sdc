@@ -39,8 +39,12 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
   const unconfirmed = request.events.filter((e) => !e.confirmed);
   const receiptsSen = request.events.filter((e) => e.direction === "IN").reduce((s, e) => s + e.amountSen, 0);
   const costsSen = request.events.filter((e) => e.direction === "OUT").reduce((s, e) => s + e.amountSen, 0);
-  const canRun = request.status === "DRAFT" || request.status === "NEEDS_INFO";
+  const canEdit =
+    request.status === "DRAFT" ||
+    request.status === "NEEDS_INFO";
+  const canRun = canEdit || request.status === "CHECKED";
   const hasResult = check && check.comparisons.length > 0 && company;
+  const savedReserveSen = check?.reserveSen;
 
   return (
     <>
@@ -58,11 +62,11 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
         {canRun && <RunCheckButton requestId={request.id} label={check ? "Run the check again" : "Run the check"} />}
       </div>
 
-      {hasResult ? (
+      {hasResult && savedReserveSen != null ? (
         <ResultHero
           comparisons={check.comparisons}
           policy={check.policy}
-          reserveSen={company.reserveSen}
+          reserveSen={savedReserveSen}
           context={`${formatRM(request.contractValueSen)} contract · checked ${prettyTime(check.createdAt)}`}
         />
       ) : (
@@ -71,9 +75,11 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
             {check ? <span className="pill danger">Missing information</span> : <span>Not checked yet</span>}
           </div>
           <p className="headline">
-            {check
-              ? "Some details need fixing before the cash check can run."
-              : "Run the check to see how this job changes your cash over the next 13 weeks."}
+            {hasResult && savedReserveSen == null
+              ? "The reserve used for this check is unavailable. Historical results cannot be displayed reliably."
+              : check
+                ? "Some details need fixing before the cash check can run."
+                : "Run the check to see how this job changes your cash over the next 13 weeks."}
           </p>
           {check && check.validation.some((v) => v.severity === "ERROR") && (
             <ul className="small" style={{ color: "#fff" }}>
@@ -96,7 +102,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
             </div>
           )}
 
-          {hasResult && <ResultDetails comparisons={check.comparisons} policy={check.policy} brief={check.brief} reserveSen={company.reserveSen} />}
+          {hasResult && savedReserveSen != null && <ResultDetails comparisons={check.comparisons} policy={check.policy} brief={check.brief} reserveSen={savedReserveSen} />}
 
           <div className="card overflow">
             <div className="card-head">
@@ -106,7 +112,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
             {unconfirmed.length > 0 && (
               <p className="error">{unconfirmed.length} suggested payment(s) are not confirmed and will not be used in the check.</p>
             )}
-            {canRun ? (
+            {canEdit ? (
               <>
                 <p className="muted small">You can still change the payments. Run the check again afterwards.</p>
                 <EditPayments
