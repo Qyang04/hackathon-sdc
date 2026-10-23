@@ -69,6 +69,7 @@ export async function generateBrief(
     DecisionBrief, //validates the response’s structure
     systemPrompt, //defines the explanation rules
     JSON.stringify(evidence), //converts your evidence object into text
+    60_000, // Temporary: allow 60 seconds for live testing.
   );
 
   // Match RM amounts, including an optional negative sign.
