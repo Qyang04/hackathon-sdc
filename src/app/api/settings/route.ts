@@ -3,6 +3,18 @@ import { prisma } from "@/lib/db";
 import { getSession, canDecide } from "@/lib/session";
 import { UpdateSettings } from "./schemas";
 import { lockCompanySettings } from "@/lib/settings-lock";
+import { formatRM } from "@/lib/engine/money";
+
+type SettingValues = { reserveSen: number; approvalThresholdSen: number; customerDelayDays: number };
+
+// Plain sentence for the activity log, listing only what changed
+function describeChange(before: SettingValues, after: SettingValues): string {
+  const changes: string[] = [];
+  if (before.reserveSen !== after.reserveSen) changes.push(`safety buffer ${formatRM(before.reserveSen)} → ${formatRM(after.reserveSen)}`);
+  if (before.approvalThresholdSen !== after.approvalThresholdSen) changes.push(`review threshold ${formatRM(before.approvalThresholdSen)} → ${formatRM(after.approvalThresholdSen)}`);
+  if (before.customerDelayDays !== after.customerDelayDays) changes.push(`customer delay ${before.customerDelayDays} → ${after.customerDelayDays} days`);
+  return changes.length > 0 ? `Settings changed: ${changes.join("; ")}` : "Settings saved with no changes";
+}
 
 export async function PATCH(req: Request) {
   // Check permission before processing an update.
@@ -51,18 +63,7 @@ export async function PATCH(req: Request) {
         requestId: null,
         actor: session.name,
         action: "SETTINGS_UPDATED",
-        detail: JSON.stringify({
-          before: {
-            reserveSen: previous.reserveSen,
-            approvalThresholdSen: previous.approvalThresholdSen,
-            customerDelayDays: previous.customerDelayDays,
-          },
-          after: {
-            reserveSen: updated.reserveSen,
-            approvalThresholdSen: updated.approvalThresholdSen,
-            customerDelayDays: updated.customerDelayDays,
-          },
-        }),
+        detail: describeChange(previous, updated),
       },
     });
 

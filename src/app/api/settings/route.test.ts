@@ -137,18 +137,10 @@ describe("PATCH /api/settings", () => {
       action: "SETTINGS_UPDATED",
     });
 
-    expect(JSON.parse(activity.detail)).toEqual({
-      before: {
-        reserveSen: 3_000_000,
-        approvalThresholdSen: 10_000_000,
-        customerDelayDays: 14,
-      },
-      after: {
-        reserveSen: 4_000_000,
-        approvalThresholdSen: 10_000_000,
-        customerDelayDays: 14,
-      },
-    });
+    // Only the changed setting, as a sentence the Activity page can show
+    expect(activity.detail).toBe(
+      "Settings changed: safety buffer RM 30,000.00 → RM 40,000.00",
+    );
 
     expect(await response.json()).toEqual({
       settings: {
