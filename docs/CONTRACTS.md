@@ -86,4 +86,4 @@ CHECKED --(check run again, e.g. after a settings change)--> CHECKED
 | `POST /api/requests/:id/forecast` | Validate, three scenarios, policy, brief, save run | Done (brief is null if AI is not configured, fails or takes over 20 s) |
 | `POST /api/requests/:id/decision` | Owner decision + outcome action | Done |
 | `POST /api/reset` | Re-seed demo data (owner only; 403 for staff) | Done |
-| `PATCH /api/settings` | Owner changes buffer, review threshold, customer delay (0 allowed; delay at most 90 days); logged | Done (no settings page yet) |
+| `PATCH /api/settings` | Owner changes buffer, review threshold, customer delay (0 allowed; delay at most 90 days); logged | Done (page: `/settings`) |

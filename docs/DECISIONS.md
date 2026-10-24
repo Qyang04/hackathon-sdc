@@ -19,7 +19,7 @@ Record each team decision with date and who decided. Design decisions stay with 
 | D2 | Outcome action after approval | E-sign acceptance (scaffold default) / project creation / deposit invoice request | Built as e-sign acceptance (simulated); team to confirm | |
 | D3 | KPI and baseline | e.g. minutes per commitment review; % of reviews with complete evidence | | |
 | D4 | Database on Replit | Replit PostgreSQL (change Prisma provider) / SQLite on a Reserved VM | Replit PostgreSQL; self-run Postgres (Docker) for local dev and as fallback if Replit credit runs out | 2026-10-22 |
-| D5 | LLM provider and model | any OpenAI-compatible API | | |
+| D5 | LLM provider and model | any OpenAI-compatible API | NVIDIA `nvidia/nemotron-3.5-lightning-30b-a3b` via an OpenAI-compatible endpoint (`LLM_DISABLE_THINKING=true`) | 2026-10-24 |
 | D6 | Real-world validation | who we spoke to, what we learned (never invented) | | |
 
 ## Made
