@@ -243,3 +243,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .hero .headline { font-size: 19px; }
   .card { padding: 16px; }
 }
+
+/* ---------- Printed report ---------- */
+@media print {
+  .sidebar, .no-print { display: none !important; }
+  .shell { display: block; }
+  main { padding: 0; max-width: none; }
+  body { background: #fff; }
+  .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+}

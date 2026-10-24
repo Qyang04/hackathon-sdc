@@ -17,6 +17,7 @@ const ACTION_TEXT: Record<string, string> = {
   OUTCOME_SENT: "E-signature sent",
   OUTCOME_FAILED: "E-signature failed",
   SETTINGS_UPDATED: "Settings changed",
+  NOTIFICATION_SENT: "Email sent (simulated)",
 };
 
 const tz = { timeZone: "Asia/Kuala_Lumpur" } as const;

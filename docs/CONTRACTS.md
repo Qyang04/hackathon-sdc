@@ -60,6 +60,7 @@ CHECKED --(check run again, e.g. after a settings change)--> CHECKED
 - Only `OWNER` can decide (checked on the server). A decision must reference the latest `ForecastRun`.
 - If the owner created the request, the decision is stored with `selfApproved = true` and shown in the activity log.
 - Every transition writes an `ActivityLog` row.
+- After a check is saved, a simulated email (`NOTIFICATION_SENT` row, listed on `/outbox`) goes to the owner, or back to the requester if the check is BLOCKED; after a decision, one goes to the requester. Each links to the printable report `/requests/:id/report`. A failed email never undoes the check or decision.
 - A check keeps the settings it was run with (`ForecastRun.inputJson`), and the result page shows its saved buffer.
   Approval is refused (409) if company settings changed since the latest check; run the check again first.
 - A check that finishes after the request was edited or decided, or after settings changed, is not saved (409).

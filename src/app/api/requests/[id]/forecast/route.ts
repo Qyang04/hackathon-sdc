@@ -1,7 +1,7 @@
 // POST /api/requests/:id/forecast
 // validate -> (if no ERROR) compareProposal for BASE, DOWNSIDE, DEFERRED_START -> evaluatePolicy
 // -> try generateBrief (AI failure keeps figures; brief = null) -> save ForecastRun -> status CHECKED or NEEDS_INFO
-// -> logActivity FORECAST_RUN. Returns { runId, validation, comparisons, policy, brief }.
+// -> logActivity FORECAST_RUN -> simulated email (owner if checked, requester if blocked). Returns { runId, validation, comparisons, policy, brief }.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -14,6 +14,7 @@ import { evaluatePolicy } from "@/lib/policy/policy";
 import { generateBrief } from "@/lib/ai/brief";
 import type { DecisionBrief } from "@/lib/ai/schemas";
 import { saveCheck } from "@/lib/runs";
+import { checkNotification, sendNotification } from "@/lib/notify";
 
 const RUNNABLE = ["DRAFT", "NEEDS_INFO", "CHECKED"];
 const MIN_HORIZON_DAYS = 91; // 13 weeks
@@ -220,6 +221,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (result instanceof NextResponse) {
     return result;
   }
+
+  // 6. Tell the next person (simulated email); after the save, so it never blocks the check
+  await sendNotification(id, checkNotification(request, policy, base));
 
   return NextResponse.json({
     runId: result.runId,
