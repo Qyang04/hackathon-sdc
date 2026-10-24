@@ -1,4 +1,5 @@
-# Orbyte Project Commitment Copilot
+# Orbyte Project Commitment Copilot 
+## Team Name: Milk Dragon
 
 Before a project-based SME accepts a new job or a large order, the Copilot reads the quotation, checks it against existing commitments and upcoming payroll, flags any week where cash would fall below the owner's safety buffer, and routes the decision to the owner with a logged record.
 
@@ -6,10 +7,11 @@ SDC Hackathon 2026 · Domain 2: Orbyte Smart SME Challenge · SDG 8 (targets 8.2
 
 > All data in this project is synthetic. Orbyte connections are simulated. The app supports a person's decision; it does not give financial advice and never approves or pays anything by itself.
 
-## Status
+## Presentation and demo video
 
-Phases 1 and 2 are done: the whole journey works locally. See **Progress** at the top of `docs/PLAN.md` for what is done and not done per workstream, `docs/DEMO.md` for the demo script and expected figures, and `docs/E2E-TESTING.md`
-for a step-by-step test of the whole app.
+Watch our [slide presentation and app walkthrough on YouTube](https://youtu.be/XL1WfnTrOss).
+
+The video demonstrates the commitment-check workflow, cash-flow scenarios, AI summary, owner decision and activity log.
 
 ## Quick start (local)
 
