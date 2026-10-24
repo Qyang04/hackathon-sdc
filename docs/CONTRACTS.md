@@ -83,6 +83,7 @@ CHECKED --(check run again, e.g. after a settings change)--> CHECKED
 | `POST /api/requests` | Create DRAFT request with proposal events | Done |
 | `GET /api/requests/:id` | Request, events, latest run, decisions, activity | Done |
 | `PATCH /api/requests/:id` | Edit draft, confirm AI-extracted events, add/remove manual events | Done |
+| `POST /api/upload` | Text of a quotation / PO PDF (multipart `file`, max 5 MB, 20 pages) for the person to check before extraction; no OCR, a scan returns `hasText: false`; nothing saved | Done |
 | `POST /api/extract` | AI milestones from pasted text | Done |
 | `POST /api/requests/:id/forecast` | Validate, three scenarios, policy, brief, save run | Done (brief is null if AI is not configured, fails or takes over 20 s) |
 | `POST /api/auto-check` | Simulated Orbyte Sales webhook: creates a DRAFT request from a structured quotation (empty body = the demo quotation `DEMO_QUOTATION`); the caller then runs `POST /api/requests/:id/forecast`. Staff may trigger; no AI involved | Done (overview button "Simulate quotation from Orbyte Sales" chains it with the check) |

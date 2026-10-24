@@ -1,7 +1,7 @@
 "use client";
 // Three-step wizard. Owner: Workstream C (calls B's APIs).
 // 1. Describe the job (title, client, start date, duration, contract value, budget)
-// 2. Paste the quotation / PO -> AI suggests payment dates -> confirm or edit each one (manual entry always available)
+// 2. Upload a PDF or paste the quotation / PO -> AI suggests payment dates -> confirm or edit each one (manual entry always available)
 // 3. Run the check -> redirect to /requests/[id]
 import { useState } from "react";
 import Link from "next/link";
@@ -151,6 +151,29 @@ function PaymentsStep({
   const [busy, setBusy] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
+
+  // Reads the PDF's text into the box so the person sees exactly what the AI will read
+  async function upload(file: File) {
+    setBusy(true);
+    setError(null);
+    setUploadNote(null);
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    setBusy(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? "The PDF could not be read. Paste the payment terms instead.");
+      return;
+    }
+    if (!data.hasText) {
+      setUploadNote(`${file.name} has no readable text (it looks like a scan or photo). Type or paste the payment terms instead.`);
+      return;
+    }
+    setText(data.text);
+    setUploadNote(`Read ${file.name} (${data.pages} page${data.pages === 1 ? "" : "s"}). Check the text below, then ask for suggestions.`);
+  }
 
   async function extract() {
     setBusy(true);
@@ -174,12 +197,27 @@ function PaymentsStep({
     <>
       <div className="card">
         <div className="card-head">
-          <h2>Paste the quotation or purchase order</h2>
+          <h2>Upload or paste the quotation or purchase order</h2>
           <span className="ai-label" style={{ margin: 0 }}>Suggestions only</span>
         </div>
         <p className="muted small">
           The assistant suggests payment dates and amounts from the text. Nothing is used until you confirm it.
         </p>
+        <div className="field">
+          <label htmlFor="pdf">Upload a PDF (text PDFs from accounting software; scans and photos are not read)</label>
+          <input
+            id="pdf"
+            type="file"
+            accept="application/pdf,.pdf"
+            disabled={busy}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void upload(file);
+              e.target.value = "";
+            }}
+          />
+          {uploadNote && <span className="small muted">{uploadNote}</span>}
+        </div>
         <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the payment terms here…" />
         <div className="actions">
           <button onClick={extract} disabled={busy || text.trim() === ""}>{busy ? "Reading…" : "Suggest payment dates"}</button>
