@@ -5,6 +5,7 @@ import { simulatedAccounting } from "@/lib/adapters/orbyte";
 import { addDays, expandRecurring, formatRM, normaliseExisting, runForecast, scenarioPresets } from "@/lib/engine";
 import { StatusPill } from "./StatusPill";
 import { ResetDemoButton } from "./ResetDemoButton";
+import { SimulateQuotationButton } from "./SimulateQuotationButton";
 import { canDecide, getSession } from "@/lib/session";
 import { prettyDate, shortRM } from "./format";
 
@@ -57,6 +58,7 @@ export default async function OverviewPage() {
         </div>
         <div className="actions" style={{ marginTop: 0, alignItems: "center" }}>
           {canDecide(session) && <ResetDemoButton />}
+          <SimulateQuotationButton />
           <Link href="/requests/new" className="button">Start a new check</Link>
         </div>
       </div>
@@ -78,7 +80,7 @@ export default async function OverviewPage() {
             <div className="value">{shortRM(settings.reserveSen)}</div>
           </div>
           <div>
-            <div className="label">Jobs above this always go to you</div>
+            <div className="label">Jobs above this get a review flag</div>
             <div className="value">{shortRM(settings.approvalThresholdSen)}</div>
           </div>
         </div>
