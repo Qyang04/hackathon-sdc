@@ -148,3 +148,32 @@ export const DEMO_PROPOSAL = {
     { id: "demo-p6", direction: "IN", amountSen: 4_250_000, offsetDays: 60, confidence: "ESTIMATED", label: "50% balance on handover", source: "MANUAL", confirmed: true },
   ] satisfies ProposalEventInput[],
 };
+
+// The quotation a simulated Orbyte Sales webhook delivers (stretch: "New quotation in Orbyte Sales
+// starts a check automatically · simulated", Plan v2). Structured data, as a real Sales integration
+// would send — no AI involved, so the auto-trigger demo never depends on the AI provider (D5).
+// A small job on purpose: RM 12,000 is below the RM 50,000 review threshold, so it shows the
+// automatic path (no owner review) next to the Bangsar job (which does need review).
+export const DEMO_QUOTATION = {
+  title: "Signage and awning, second outlet",
+  client: "Kedai Kopi Contoh (synthetic)",
+  startDate: "2026-11-23",
+  durationDays: 21,
+  contractValueSen: 1_200_000,
+  budgetSen: 750_000,
+  justification: "Second outlet opening; signage installed before opening day.",
+  sourceText: [
+    "QUOTATION QT-2026-121 (synthetic)",
+    "Kedai Kopi Contoh - signage and awning for the second outlet, 3 weeks from 23 Nov 2026.",
+    "Contract sum: RM 12,000.00",
+    "Payment terms: 20% deposit on signing; 40% progress claim on fabrication, est. day 14; 40% balance on completion.",
+    "Our costs (internal): signboard supplier deposit RM 3,000 on order; installation labour RM 2,200 in week 2.",
+  ].join("\n"),
+  events: [
+    { direction: "IN", amountSen: 240_000, offsetDays: 0, confidence: "CONFIRMED", counterparty: "Kedai Kopi Contoh", label: "20% deposit" },
+    { direction: "OUT", amountSen: 300_000, offsetDays: 2, confidence: "CONFIRMED", counterparty: "Signboard Sdn Bhd", label: "Signage supplier deposit" },
+    { direction: "OUT", amountSen: 220_000, offsetDays: 10, confidence: "CONFIRMED", counterparty: "Site crew", label: "Installation labour" },
+    { direction: "IN", amountSen: 480_000, offsetDays: 14, confidence: "ESTIMATED", counterparty: "Kedai Kopi Contoh", label: "40% progress claim" },
+    { direction: "IN", amountSen: 480_000, offsetDays: 21, confidence: "ESTIMATED", counterparty: "Kedai Kopi Contoh", label: "40% balance on completion" },
+  ] satisfies Array<{ direction: "IN" | "OUT"; amountSen: number; offsetDays: number; confidence: "CONFIRMED" | "ESTIMATED"; counterparty: string; label: string }>,
+};
