@@ -59,7 +59,10 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
             <span>requested by {request.requestedBy}</span>
           </div>
         </div>
-        {canRun && <RunCheckButton requestId={request.id} label={check ? "Run the check again" : "Run the check"} />}
+        <div className="actions">
+          {check && <Link href={`/requests/${request.id}/report`} className="button secondary">Report</Link>}
+          {canRun && <RunCheckButton requestId={request.id} label={check ? "Run the check again" : "Run the check"} />}
+        </div>
       </div>
 
       {hasResult && savedReserveSen != null ? (
