@@ -16,6 +16,7 @@ const ACTION_TEXT: Record<string, string> = {
   DECISION: "Owner decision",
   OUTCOME_SENT: "E-signature sent",
   OUTCOME_FAILED: "E-signature failed",
+  SETTINGS_UPDATED: "Settings changed",
 };
 
 const tz = { timeZone: "Asia/Kuala_Lumpur" } as const;
