@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   listRecurringCosts: vi.fn(),
   generateBrief: vi.fn(),
   saveCheck: vi.fn(),
+  sendNotification: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -47,6 +48,11 @@ vi.mock("@/lib/ai/brief", () => ({
 
 vi.mock("@/lib/runs", () => ({
   saveCheck: mocks.saveCheck,
+}));
+
+vi.mock("@/lib/notify", () => ({
+  checkNotification: vi.fn(() => ({ to: "Demo Owner", subject: "Check ready", summary: "" })),
+  sendNotification: mocks.sendNotification,
 }));
 
 import { POST } from "./route";
@@ -127,6 +133,7 @@ function expectNoWrites() {
   expect(mocks.claimRequest).not.toHaveBeenCalled();
   expect(mocks.saveCheck).not.toHaveBeenCalled();
   expect(mocks.createActivity).not.toHaveBeenCalled();
+  expect(mocks.sendNotification).not.toHaveBeenCalled();
 }
 
 describe("forecast save protection", () => {
@@ -173,6 +180,7 @@ describe("forecast save protection", () => {
         action: "FORECAST_RUN",
       }),
     });
+    expect(mocks.sendNotification).toHaveBeenCalledOnce();
   });
 
   it.each(["APPROVED", "REJECTED", "COMPLETED"])(
@@ -232,6 +240,7 @@ describe("forecast save protection", () => {
     expect(response.status).toBe(409);
     expect(mocks.saveCheck).not.toHaveBeenCalled();
     expect(mocks.createActivity).not.toHaveBeenCalled();
+    expect(mocks.sendNotification).not.toHaveBeenCalled();
   });
 
   it("propagates a save failure without writing the activity", async () => {

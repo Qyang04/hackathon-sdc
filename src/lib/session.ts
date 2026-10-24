@@ -7,7 +7,7 @@ export interface Session {
   name: string;
 }
 
-const NAMES: Record<Role, string> = { OWNER: "Aisyah (Owner)", STAFF: "Wei Jie (Project lead)" };
+export const NAMES: Record<Role, string> = { OWNER: "Aisyah (Owner)", STAFF: "Wei Jie (Project lead)" };
 
 export async function getSession(): Promise<Session> {
   const role = (await cookies()).get("role")?.value === "STAFF" ? "STAFF" : "OWNER";

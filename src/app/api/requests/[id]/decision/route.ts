@@ -1,6 +1,6 @@
 // POST /api/requests/:id/decision { outcome: "APPROVED"|"REJECTED"|"NEEDS_INFO", reason, forecastRunId }
 // Server checks: canDecide(session); request status is CHECKED; forecastRunId is the latest run.
-// On APPROVED: simulatedESign.sendForSignature -> status COMPLETED -> log DECISION + OUTCOME_SENT.
+// On APPROVED: simulatedESign.sendForSignature -> status COMPLETED -> log DECISION + OUTCOME_SENT -> simulated email to the requester.
 // selfApproved = true when the owner also created the request.
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { canDecide, getSession } from "@/lib/session";
 import { logActivity } from "@/lib/audit";
 import { simulatedESign } from "@/lib/adapters/orbyte";
+import { decisionNotification, sendNotification } from "@/lib/notify";
 import { lockCompanySettings } from "@/lib/settings-lock";
 
 const DecisionBody = z.object({
@@ -173,6 +174,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       await logActivity({ requestId: id, actor: "system", action: "OUTCOME_FAILED", detail: "Could not send the acceptance for e-signature" });
     }
   }
+
+  await sendNotification(id, decisionNotification(request, outcome, reason, envelopeId));
 
   const updated = await prisma.commitmentRequest.findUnique({ where: { id }, select: { status: true } });
   return NextResponse.json({ status: updated?.status, selfApproved, envelopeId });
