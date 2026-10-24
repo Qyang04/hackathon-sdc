@@ -209,6 +209,35 @@ Click **Activity** in the sidebar.
 
 ---
 
+## Test 9 — A quotation arrives in Orbyte Sales (simulated, no typing)
+
+*Stretch feature (Plan v2): shows how the Copilot would work day-to-day — a new quotation lands in Orbyte Sales and the check is one step away, with nobody pasting anything.*
+
+1. In a terminal (app running on port 3000):
+
+   ```bash
+   curl -s -X POST http://localhost:3000/api/auto-check
+   ```
+
+   No body = the demo quotation (*Signage and awning, second outlet*, RM 12,000). The response is `201` with `request` (an `id`) and a `check` path.
+
+2. Run the check the webhook points at:
+
+   ```bash
+   curl -s -X POST http://localhost:3000/api/requests/<id-from-step-1>/forecast
+   ```
+
+3. Open **Overview** → the new job is in *Commitment checks*; open it → result page with the three scenarios.
+
+- [ ] The new request exists without anyone typing (the activity log shows *Orbyte Sales (simulated)* as the source; requested-by is the person viewing).
+- [ ] The check runs and saves like any other (status CHECKED; activity shows *REQUEST_CREATED — triggered from Orbyte Sales*).
+- [ ] RM 12,000 is below the RM 50,000 review threshold, so **no rule is triggered** (PASS). It still waits for the owner's decision, like every job; the Bangsar job also gets a review flag.
+- [ ] A body with a bad quotation is refused: `curl -s -X POST http://localhost:3000/api/auto-check -H 'content-type: application/json' -d '{"title":""}'` → `400 Invalid quotation`, nothing saved.
+
+> One click: on **Overview**, press **Simulate quotation from Orbyte Sales**. It creates the job, runs the check (which emails the owner, see **Outbox**) and opens the result.
+
+---
+
 ## Optional checks
 
 - **Phone size:** make the browser narrow (or open on a phone on the same Wi-Fi). The sidebar becomes a top bar, and the right column moves under the details.

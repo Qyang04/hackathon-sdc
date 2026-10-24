@@ -85,6 +85,7 @@ CHECKED --(check run again, e.g. after a settings change)--> CHECKED
 | `PATCH /api/requests/:id` | Edit draft, confirm AI-extracted events, add/remove manual events | Done |
 | `POST /api/extract` | AI milestones from pasted text | Done |
 | `POST /api/requests/:id/forecast` | Validate, three scenarios, policy, brief, save run | Done (brief is null if AI is not configured, fails or takes over 20 s) |
+| `POST /api/auto-check` | Simulated Orbyte Sales webhook: creates a DRAFT request from a structured quotation (empty body = the demo quotation `DEMO_QUOTATION`); the caller then runs `POST /api/requests/:id/forecast`. Staff may trigger; no AI involved | Done (overview button "Simulate quotation from Orbyte Sales" chains it with the check) |
 | `POST /api/requests/:id/decision` | Owner decision + outcome action | Done |
 | `POST /api/reset` | Re-seed demo data (owner only; 403 for staff) | Done |
 | `PATCH /api/settings` | Owner changes buffer, review threshold, customer delay (0 allowed; delay at most 90 days); logged | Done (page: `/settings`) |
