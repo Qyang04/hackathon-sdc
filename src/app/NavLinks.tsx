@@ -10,6 +10,7 @@ export function NavLinks({ awaiting }: { awaiting: number }) {
     { href: "/requests/new", text: "New check", active: path === "/requests/new" },
     { href: "/how", text: "How it works", active: path.startsWith("/how") },
     { href: "/activity", text: "Activity", active: path === "/activity" },
+    { href: "/settings", text: "Settings", active: path === "/settings" },
   ];
   return (
     <nav>
