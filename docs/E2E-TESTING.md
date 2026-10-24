@@ -234,7 +234,7 @@ Click **Activity** in the sidebar.
 - [ ] RM 12,000 is below the RM 50,000 review threshold, so **no rule is triggered** (PASS). It still waits for the owner's decision, like every job; the Bangsar job also gets a review flag.
 - [ ] A body with a bad quotation is refused: `curl -s -X POST http://localhost:3000/api/auto-check -H 'content-type: application/json' -d '{"title":""}'` → `400 Invalid quotation`, nothing saved.
 
-> UI note: a one-click "simulate quotation arrives" button is a hand-off to lane C; the API is complete.
+> One click: on **Overview**, press **Simulate quotation from Orbyte Sales**. It creates the job, runs the check (which emails the owner, see **Outbox**) and opens the result.
 
 ---
 
