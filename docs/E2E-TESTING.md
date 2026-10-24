@@ -229,9 +229,9 @@ Click **Activity** in the sidebar.
 
 3. Open **Overview** → the new job is in *Commitment checks*; open it → result page with the three scenarios.
 
-- [ ] The new request exists without anyone typing (requested-by shows *Orbyte Sales (simulated)*).
+- [ ] The new request exists without anyone typing (the activity log shows *Orbyte Sales (simulated)* as the source; requested-by is the person viewing).
 - [ ] The check runs and saves like any other (status CHECKED; activity shows *REQUEST_CREATED — triggered from Orbyte Sales*).
-- [ ] RM 12,000 is below the RM 50,000 review threshold, so the outcome needs **no owner review** — the automatic path, next to the Bangsar job which does need review.
+- [ ] RM 12,000 is below the RM 50,000 review threshold, so **no rule is triggered** (PASS). It still waits for the owner's decision, like every job; the Bangsar job also gets a review flag.
 - [ ] A body with a bad quotation is refused: `curl -s -X POST http://localhost:3000/api/auto-check -H 'content-type: application/json' -d '{"title":""}'` → `400 Invalid quotation`, nothing saved.
 
 > UI note: a one-click "simulate quotation arrives" button is a hand-off to lane C; the API is complete.

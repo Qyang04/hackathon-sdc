@@ -152,8 +152,8 @@ export const DEMO_PROPOSAL = {
 // The quotation a simulated Orbyte Sales webhook delivers (stretch: "New quotation in Orbyte Sales
 // starts a check automatically · simulated", Plan v2). Structured data, as a real Sales integration
 // would send — no AI involved, so the auto-trigger demo never depends on the AI provider (D5).
-// A small job on purpose: RM 12,000 is below the RM 50,000 review threshold, so it shows the
-// automatic path (no owner review) next to the Bangsar job (which does need review).
+// A small job on purpose: RM 12,000 is below the RM 50,000 review threshold, so no rule is triggered
+// (PASS), next to the Bangsar job which gets a review flag. The owner still decides both.
 export const DEMO_QUOTATION = {
   title: "Signage and awning, second outlet",
   client: "Kedai Kopi Contoh (synthetic)",

@@ -57,7 +57,8 @@ describe("POST /api/auto-check (simulated Orbyte Sales webhook)", () => {
     const { data } = mocks.createRequest.mock.calls[0][0];
     expect(data.title).toBe(DEMO_QUOTATION.title);
     expect(data.status).toBe("DRAFT");
-    expect(data.requestedBy).toContain("Orbyte Sales (simulated)");
+    // The receiver is the requester, so an owner approving a job they received is flagged as self-approved
+    expect(data.requestedBy).toBe("Wei Jie (Project lead)");
     expect(data.events.create).toHaveLength(DEMO_QUOTATION.events.length);
     for (const e of data.events.create) {
       expect(e).toMatchObject({ status: "PLANNED", source: "MANUAL", confirmed: true });
@@ -103,7 +104,7 @@ describe("POST /api/auto-check (simulated Orbyte Sales webhook)", () => {
     expect(response.status).toBe(201);
     const { data } = mocks.createRequest.mock.calls[0][0];
     expect(data.title).toBe("Custom job");
-    expect(data.requestedBy).toContain("Wei Jie (Project lead)");
+    expect(data.requestedBy).toBe("Wei Jie (Project lead)");
   });
 
   it.each([

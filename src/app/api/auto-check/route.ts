@@ -29,7 +29,8 @@ export async function POST(req: Request) {
   const created = await prisma.commitmentRequest.create({
     data: {
       ...fields,
-      requestedBy: `Orbyte Sales (simulated) → ${session.name}`,
+      // The person who receives the quotation; the Sales source is in the activity log. Keeps selfApproved honest.
+      requestedBy: session.name,
       status: "DRAFT",
       events: {
         create: events.map((e) => ({ ...e, status: "PLANNED", source: "MANUAL", confirmed: true })),
